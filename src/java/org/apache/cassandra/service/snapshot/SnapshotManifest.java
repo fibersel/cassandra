@@ -25,8 +25,6 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.cassandra.config.Duration;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -38,7 +36,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
                 setterVisibility = JsonAutoDetect.Visibility.NONE)
 public class SnapshotManifest
 {
-    static final ObjectMapper mapper = new ObjectMapper();
+    private static final ObjectMapper mapper = new ObjectMapper();
     static {
         mapper.registerModule(new JavaTimeModule());
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -47,16 +45,15 @@ public class SnapshotManifest
     @JsonProperty("files")
     public final List<String> files;
 
-    @JsonSerialize(using = ToStringSerializer.class)
     @JsonProperty("created_at")
     public final Instant createdAt;
 
-    @JsonSerialize(using = ToStringSerializer.class)
     @JsonProperty("expires_at")
     public final Instant expiresAt;
 
+    /** needed for jackson serialization*/
+    @SuppressWarnings("unused")
     private SnapshotManifest() {
-        super();
         this.files = null;
         this.createdAt = null;
         this.expiresAt = null;

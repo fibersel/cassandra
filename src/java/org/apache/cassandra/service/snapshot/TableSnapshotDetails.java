@@ -19,6 +19,7 @@ package org.apache.cassandra.service.snapshot;
 
 import java.io.File;
 import java.time.Instant;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -108,5 +109,20 @@ public class TableSnapshotDetails
     public String toString()
     {
         return String.format("{}.{}.{}", keyspace, table, tag);
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        TableSnapshotDetails that = (TableSnapshotDetails) o;
+        return keyspace.equals(that.keyspace) && table.equals(that.table) && tag.equals(that.tag);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(keyspace, table, tag);
     }
 }
