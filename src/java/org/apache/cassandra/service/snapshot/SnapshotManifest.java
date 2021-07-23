@@ -24,16 +24,13 @@ import java.time.Instant;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.cassandra.config.Duration;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 
 // Only serialize fields
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY,
@@ -42,18 +39,19 @@ import org.apache.cassandra.config.Duration;
 public class SnapshotManifest
 {
     static final ObjectMapper mapper = new ObjectMapper();
+    static {
+        mapper.registerModule(new JavaTimeModule());
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    }
 
     @JsonProperty("files")
     public final List<String> files;
 
     @JsonSerialize(using = ToStringSerializer.class)
-    @JsonDeserialize(using = InstantDeserializer.class)
     @JsonProperty("created_at")
     public final Instant createdAt;
 
-    @JsonInclude(JsonInclude.Include.NON_NULL)
     @JsonSerialize(using = ToStringSerializer.class)
-    @JsonDeserialize(using = InstantDeserializer.class)
     @JsonProperty("expires_at")
     public final Instant expiresAt;
 
@@ -94,12 +92,5 @@ public class SnapshotManifest
     public static SnapshotManifest deserializeFromJsonFile(File file) throws IOException
     {
         return mapper.readValue(file, SnapshotManifest.class);
-    }
-
-    public static class InstantDeserializer extends JsonDeserializer<Instant> {
-        @Override
-        public Instant deserialize(JsonParser p, DeserializationContext ctx) throws IOException {
-            return Instant.parse(p.getText());
-        }
     }
 }
