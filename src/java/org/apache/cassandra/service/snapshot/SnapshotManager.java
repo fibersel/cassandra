@@ -47,9 +47,19 @@ public class SnapshotManager {
      */
     private final PriorityQueue<TableSnapshotDetails> expiringSnapshots = new PriorityQueue<>(Comparator.comparing(x -> x.getExpiresAt()));
 
+    public PriorityQueue<TableSnapshotDetails> getExpiringSnapshots()
+    {
+        return expiringSnapshots;
+    }
+
     public synchronized void start() {
         loadSnapshots();
         resumeSnapshotCleanup();
+    }
+
+    public synchronized void shutdown() {
+        cleanupTaskFuture.cancel(false);
+        expiringSnapshots.clear();
     }
 
     public synchronized void addSnapshot(TableSnapshotDetails snapshot) {
