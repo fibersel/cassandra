@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -51,12 +53,19 @@ public class SnapshotManifest
     @JsonProperty("expires_at")
     public final Instant expiresAt;
 
-    /** needed for jackson serialization*/
+    /** needed for jackson serialization */
     @SuppressWarnings("unused")
     private SnapshotManifest() {
         this.files = null;
         this.createdAt = null;
         this.expiresAt = null;
+    }
+
+    @VisibleForTesting
+    protected SnapshotManifest(List<String> files, Instant createdAt, Instant expiresAt) {
+        this.files = files;
+        this.createdAt = createdAt;
+        this.expiresAt = expiresAt;
     }
 
     public SnapshotManifest(List<String> files, Duration ttl)

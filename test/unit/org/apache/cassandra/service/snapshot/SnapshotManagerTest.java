@@ -18,71 +18,134 @@
 
 package org.apache.cassandra.service.snapshot;
 
+import java.io.File;
 import java.io.IOException;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.PriorityQueue;
+import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
+import com.google.common.collect.Table;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 
 import org.apache.cassandra.OrderedJUnit4ClassRunner;
+import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.cql3.CQLTester;
+import org.apache.cassandra.io.util.FileUtils;
+import org.apache.cassandra.service.DefaultFSErrorHandler;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.tools.NodeProbe;
 import org.apache.cassandra.tools.ToolRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@RunWith(OrderedJUnit4ClassRunner.class)
-public class SnapshotManagerTest extends CQLTester
+public class SnapshotManagerTest
 {
-    private static NodeProbe probe;
-
-    private static void SSstart() throws Exception {
-        StorageService.instance.initServer();
-        startJMXServer();
-        probe = new NodeProbe(jmxHost, jmxPort);
-    }
-
     @BeforeClass
-    public static void setup() throws Exception
+    public static void beforeClass()
     {
-        SSstart();
+        DatabaseDescriptor.daemonInitialization();
+        FileUtils.setFSErrorHandler(new DefaultFSErrorHandler());
     }
 
-    @AfterClass
-    public static void teardown() throws IOException
-    {
-        probe.close();
+    @ClassRule
+    public static TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+    public Set<File> createFolders() throws IOException {
+        File folder = temporaryFolder.newFolder();
+        Set<File> folders = new HashSet<>();
+        for (String folderName : Arrays.asList("foo", "bar", "buzz")) {
+            File subfolder = new File(folder, folderName);
+            subfolder.mkdir();
+            assertThat(subfolder).exists();
+            folders.add(subfolder);
+        };
+
+        return folders;
+    }
+
+
+    private TableSnapshotDetails generateSnapshotDetails(String tag, Instant expiration) throws Exception {
+        return new TableSnapshotDetails(
+            "ks",
+            "tbl",
+            tag,
+            new SnapshotManifest(
+                Arrays.asList("db1", "db2", "db3"),
+                Instant.EPOCH,
+                expiration
+            ),
+            createFolders(),
+            (file) -> 0L
+        );
     }
 
     @Test
-    public void testSnapshotIndexingAndRemoval() throws InterruptedException
-    {
-        ToolRunner.ToolResult tool = ToolRunner.invokeNodetool("snapshot", "--ttl", "1m", "-t", "some-name");
+    public void testOnlyExpiringSnapshotsIndexing() throws Exception {
+        ArrayList<TableSnapshotDetails> details = new ArrayList<>(Arrays.asList(
+            generateSnapshotDetails("expired", Instant.EPOCH),
+            generateSnapshotDetails("non-expired", Instant.now().plusMillis(5000)),
+            generateSnapshotDetails("non-expiring", null)
+        ));
 
-        PriorityQueue<TableSnapshotDetails> snapshots = StorageService.instance.snapshotManager.getExpiringSnapshots();
-        Predicate<TableSnapshotDetails> tagPredicate = (details) -> details.getTag().equals("some-name");
-        assertThat(snapshots.parallelStream().filter(tagPredicate).count()).isNotEqualTo(0L);
+        Function<String, Predicate<TableSnapshotDetails>> tagPredicate = (tagname) -> (dt) -> dt.getTag().equals(tagname);
+        SnapshotManager manager = new SnapshotManager(3, 3, details::stream);
+        manager.loadSnapshots();
 
-        Thread.sleep(70000);
-
-        assertThat(snapshots.parallelStream().filter(tagPredicate).count()).isEqualTo(0L);
+        assertThat(manager.getExpiringSnapshots().stream().filter(tagPredicate.apply("expired"))).hasSize(1);
+        assertThat(manager.getExpiringSnapshots().stream().filter(tagPredicate.apply("non-expired"))).hasSize(1);
+        assertThat(manager.getExpiringSnapshots().stream().filter(tagPredicate.apply("non-expiring"))).hasSize(0);
     }
 
     @Test
-    public void testSnapshotsLoadOnStartup() throws Exception {
-        ToolRunner.ToolResult tool = ToolRunner.invokeNodetool("snapshot", "--ttl", "10m", "-t", "some-name");
+    public void testClearingOfExpiriedSnapshots() throws Exception {
+        ArrayList<TableSnapshotDetails> details = new ArrayList<>(Arrays.asList(
+            generateSnapshotDetails("expired", Instant.EPOCH),
+            generateSnapshotDetails("non-expired", Instant.now().plusMillis(50000)),
+            generateSnapshotDetails("non-expiring", null)
+        ));
 
-        PriorityQueue<TableSnapshotDetails> snapshots = StorageService.instance.snapshotManager.getExpiringSnapshots();
-        Predicate<TableSnapshotDetails> tagPredicate = (details) -> details.getTag().equals("some-name");
-        assertThat(snapshots.parallelStream().filter(tagPredicate).count()).isNotEqualTo(0L);
+        Function<String, Predicate<TableSnapshotDetails>> tagPredicate = (tagname) -> (dt) -> dt.getTag().equals(tagname);
+        SnapshotManager manager = new SnapshotManager(3, 3, details::stream);
+        manager.loadSnapshots();
 
-        StorageService.instance.snapshotManager.shutdown();
-        StorageService.instance.snapshotManager.start();
+        assertThat(manager.getExpiringSnapshots().stream().filter(tagPredicate.apply("expired"))).hasSize(1);
+        assertThat(manager.getExpiringSnapshots().stream().filter(tagPredicate.apply("non-expired"))).hasSize(1);
+        assertThat(manager.getExpiringSnapshots().stream().filter(tagPredicate.apply("non-expiring"))).hasSize(0);
 
-        assertThat(snapshots.parallelStream().filter(tagPredicate).count()).isNotEqualTo(0L);
+        manager.clearExpiredSnapshots();
+
+        assertThat(details.get(0).isDeleted()).isEqualTo(true);
+        assertThat(details.get(1).isDeleted()).isEqualTo(false);
+        assertThat(details.get(2).isDeleted()).isEqualTo(false);
+    }
+
+    @Test
+    public void testSnapshotManagerScheduler() throws Exception {
+        ArrayList<TableSnapshotDetails> details = new ArrayList<>(Arrays.asList(
+            generateSnapshotDetails("expired", Instant.now().plusMillis(1000)),
+            generateSnapshotDetails("non-expiring", null)
+        ));
+
+        Function<String, Predicate<TableSnapshotDetails>> tagPredicate = (tagname) -> (dt) -> dt.getTag().equals(tagname);
+        SnapshotManager manager = new SnapshotManager(1, 3, details::stream);
+        manager.start();
+
+        Thread.sleep(4000);
+
+        assertThat(details.get(0).isDeleted()).isEqualTo(true);
+        assertThat(details.get(1).isDeleted()).isEqualTo(false);
+        assertThat(manager.getExpiringSnapshots()).isEmpty();
     }
 }
