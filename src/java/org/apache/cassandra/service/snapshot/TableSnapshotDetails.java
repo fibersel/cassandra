@@ -24,8 +24,12 @@ import java.util.Set;
 import java.util.function.Function;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.db.ColumnFamilyStore;
 import org.apache.cassandra.db.Directories;
+import org.apache.cassandra.db.Keyspace;
 import org.apache.cassandra.io.util.FileUtils;
+import org.apache.cassandra.schema.Schema;
+import org.apache.cassandra.service.StorageService;
 
 public class TableSnapshotDetails
 {
@@ -38,6 +42,7 @@ public class TableSnapshotDetails
 
     private final Set<File> snapshotDirs;
     private final Function<File, Long> trueDiskSizeComputer;
+    private boolean deleted;
 
     public TableSnapshotDetails(String keyspace, String table, String tag, SnapshotManifest manifest,
                                 Set<File> snapshotDirs, Function<File, Long> trueDiskSizeComputer)
@@ -84,6 +89,10 @@ public class TableSnapshotDetails
         return expiresAt.compareTo(now) < 0;
     }
 
+    public boolean isDeleted() {
+        return deleted;
+    }
+
     public boolean isExpiring() {
         return expiresAt != null;
     }
@@ -100,15 +109,22 @@ public class TableSnapshotDetails
 
     public void deleteSnapshot()
     {
+        Schema.instance.getKeyspaceInstance(keyspace).getColumnFamilyStore(table).clearSnapshot(tag);
+
+        /*
         for (File snapshotDir : snapshotDirs) {
+            System.out.println(snapshotDir.getAbsolutePath());
+
             Directories.removeSnapshotDirectory(DatabaseDescriptor.getSnapshotRateLimiter(), snapshotDir);
-        }
+        }*/
+        deleted = true;
     }
 
     @Override
     public String toString()
     {
-        return String.format("{}.{}.{}", keyspace, table, tag);
+
+        return String.format("%s.%s.%s", keyspace, table, tag);
     }
 
     @Override

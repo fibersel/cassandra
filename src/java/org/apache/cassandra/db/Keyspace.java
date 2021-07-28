@@ -340,16 +340,8 @@ public class Keyspace
         return list;
     }
 
-    public List<TableSnapshotDetails> getSnapshotDetails() {
-        List<TableSnapshotDetails> list = new ArrayList<>();
-        for (ColumnFamilyStore cfStore : getColumnFamilyStores())
-        {
-            for (Map.Entry<String, TableSnapshotDetails> details : cfStore.getSnapshotDetails().entrySet()) {
-                list.add(details.getValue());
-            }
-        }
-
-        return list;
+    public Stream<TableSnapshotDetails> getSnapshotDetails() {
+        return getColumnFamilyStores().stream().flatMap(cfs -> cfs.getSnapshotDetails().values().stream());
     }
 
     private Keyspace(String keyspaceName, SchemaProvider schema, boolean loadSSTables)

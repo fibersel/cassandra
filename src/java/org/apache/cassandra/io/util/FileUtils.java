@@ -86,7 +86,6 @@ public final class FileUtils
     private static Class clsDirectBuffer;
     private static MethodHandle mhDirectBufferCleaner;
     private static MethodHandle mhCleanerClean;
-    private static ObjectMapper mapper = new ObjectMapper();
 
     static
     {
@@ -1108,10 +1107,5 @@ public final class FileUtils
                 logger.warn("Cannot delete the directory {} as it is not empty. (Content: {})", path, content);
             }
         }
-    }
-
-    public static Map<String, Object> readFileToJson(File file) throws IOException {
-        Map<String, Object> map = mapper.readValue(file, Map.class);
-        return map;
     }
 }

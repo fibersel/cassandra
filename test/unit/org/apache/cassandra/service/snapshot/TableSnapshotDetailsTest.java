@@ -26,6 +26,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -43,11 +44,11 @@ public class TableSnapshotDetailsTest
         DatabaseDescriptor.daemonInitialization();
     }
 
-    @Rule
-    public TemporaryFolder tempFolder = new TemporaryFolder();
+    @ClassRule
+    public static TemporaryFolder tempFolder = new TemporaryFolder();
 
-    private Set<File> createFolders() throws IOException {
-        File folder = tempFolder.newFolder("tmp");
+    public Set<File> createFolders() throws IOException {
+        File folder = tempFolder.newFolder();
         Set<File> folders = new HashSet<>();
         for (String folderName : Arrays.asList("foo", "bar", "buzz")) {
             File subfolder = new File(folder, folderName);
