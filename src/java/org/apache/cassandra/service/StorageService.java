@@ -47,6 +47,7 @@ import com.google.common.base.Predicates;
 import com.google.common.collect.*;
 import com.google.common.util.concurrent.*;
 
+import org.apache.cassandra.config.CassandraRelevantProperties;
 import org.apache.cassandra.config.ParameterizedClass;
 import org.apache.cassandra.dht.RangeStreamer.FetchReplica;
 import org.apache.cassandra.fql.FullQueryLogger;
@@ -3707,8 +3708,9 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
         Duration ttl = null;
         if (options.containsKey("ttl")) {
             ttl = new Duration(options.get("ttl"));
-            if (ttl.toMinutes() < 1)
-                throw new IllegalArgumentException("ttl for snapshot must be at least 1 minute");
+            int minAllowedTtlSecs = CassandraRelevantProperties.SNAPSHOT_MIN_ALLOWED_TTL_SECONDS.getInt();
+            if (ttl.toSeconds() < minAllowedTtlSecs)
+                throw new IllegalArgumentException(String.format("ttl for snapshot must be at least %d seconds", minAllowedTtlSecs));
         }
 
         if (entities != null && entities.length > 0 && entities[0].contains("."))

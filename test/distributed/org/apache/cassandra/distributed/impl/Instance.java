@@ -573,6 +573,9 @@ public class Instance extends IsolatedExecutor implements IInvokableInstance
                     CassandraDaemon.getInstanceForTesting().start();
                 }
 
+                // TODO: add Feature.SNAPSHOT_CLEANUP
+                StorageService.instance.snapshotManager.start();
+
                 if (!FBUtilities.getBroadcastAddressAndPort().address.equals(broadcastAddress().getAddress()) ||
                     FBUtilities.getBroadcastAddressAndPort().port != broadcastAddress().getPort())
                     throw new IllegalStateException(String.format("%s != %s", FBUtilities.getBroadcastAddressAndPort(), broadcastAddress()));
@@ -728,7 +731,8 @@ public class Instance extends IsolatedExecutor implements IInvokableInstance
                                 () -> ScheduledExecutors.shutdownAndWait(1L, MINUTES),
                                 () -> SSTableReader.shutdownBlocking(1L, MINUTES),
                                 () -> shutdownAndWait(Collections.singletonList(ActiveRepairService.repairCommandExecutor())),
-                                () -> ScheduledExecutors.shutdownAndWait(1L, MINUTES)
+                                () -> ScheduledExecutors.shutdownAndWait(1L, MINUTES),
+                                () -> StorageService.instance.snapshotManager.shutdown()
             );
 
             error = parallelRun(error, executor,
