@@ -109,14 +109,11 @@ public class TableSnapshotDetails
 
     public void deleteSnapshot()
     {
-        Schema.instance.getKeyspaceInstance(keyspace).getColumnFamilyStore(table).clearSnapshot(tag);
+        // Schema.instance.getKeyspaceInstance(keyspace).getColumnFamilyStore(table).clearSnapshot(tag);
 
-        /*
         for (File snapshotDir : snapshotDirs) {
-            System.out.println(snapshotDir.getAbsolutePath());
-
             Directories.removeSnapshotDirectory(DatabaseDescriptor.getSnapshotRateLimiter(), snapshotDir);
-        }*/
+        }
         deleted = true;
     }
 

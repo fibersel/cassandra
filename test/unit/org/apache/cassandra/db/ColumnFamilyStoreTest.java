@@ -39,6 +39,8 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.Iterators;
@@ -460,6 +462,25 @@ public class ColumnFamilyStoreTest
         assert !baseTableFile.equals(indexTableFile);
         assert Directories.isSecondaryIndexFolder(new File(indexTableFile).getParentFile());
         assert indexTableFile.endsWith(baseTableFile);
+    }
+
+    private void createSnapshotAndDelete(String ks, String table) {
+        ColumnFamilyStore cfs = Keyspace.open(ks).getColumnFamilyStore(table);
+
+        cfs.snapshot("basic");
+
+        TableSnapshotDetails details = cfs.getSnapshotDetails().get("basic");
+        details.deleteSnapshot();
+
+        assertFalse(cfs.getSnapshotDetails().containsKey("basic"));
+    }
+
+    @Test
+    public void testSnapshotCreationAndDelete() {
+        createSnapshotAndDelete(KEYSPACE1, CF_INDEX1);
+        createSnapshotAndDelete(KEYSPACE1, CF_STANDARD1);
+        createSnapshotAndDelete(KEYSPACE1, CF_STANDARD2);
+        createSnapshotAndDelete(KEYSPACE2, CF_STANDARD1);
     }
 
     @Test

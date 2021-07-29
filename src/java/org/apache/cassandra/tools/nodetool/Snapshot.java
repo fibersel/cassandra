@@ -69,9 +69,6 @@ public class Snapshot extends NodeToolCmd
             options.put("skipFlush", Boolean.toString(skipFlush));
             if (null != ttl) {
                 Duration d = new Duration(ttl);
-                // ttl for snapshot must be at least 1 minute
-                if (d.toMinutes() < 1)
-                    throw new IllegalArgumentException("ttl for snapshot must be at least 1 minute");
                 options.put("ttl", d.toString());
             }
 
