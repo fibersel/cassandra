@@ -481,6 +481,7 @@ public class ColumnFamilyStoreTest
         createSnapshotAndDelete(KEYSPACE1, CF_STANDARD1);
         createSnapshotAndDelete(KEYSPACE1, CF_STANDARD2);
         createSnapshotAndDelete(KEYSPACE2, CF_STANDARD1);
+        createSnapshotAndDelete("system", "transferred_ranges");
     }
 
     @Test
