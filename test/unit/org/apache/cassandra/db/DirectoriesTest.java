@@ -55,7 +55,7 @@ import org.apache.cassandra.io.sstable.format.SSTableFormat;
 import org.apache.cassandra.io.util.FileUtils;
 import org.apache.cassandra.schema.IndexMetadata;
 import org.apache.cassandra.service.DefaultFSErrorHandler;
-import org.apache.cassandra.service.snapshot.TableSnapshotDetails;
+import org.apache.cassandra.service.snapshot.TableSnapshot;
 import org.apache.cassandra.utils.JVMStabilityInspector;
 
 import static org.junit.Assert.assertEquals;
@@ -229,11 +229,11 @@ public class DirectoriesTest
         assertEquals(40, indexDirectories.trueSnapshotsSize());
 
         // check snapshot details
-        Map<String, TableSnapshotDetails> parentSnapshotDetail = parentDirectories.getSnapshotDetails();
+        Map<String, TableSnapshot> parentSnapshotDetail = parentDirectories.listSnapshots();
         assertTrue(parentSnapshotDetail.containsKey("test"));
         assertEquals(30L, parentSnapshotDetail.get("test").computeTrueSizeBytes());
 
-        Map<String, TableSnapshotDetails> indexSnapshotDetail = indexDirectories.getSnapshotDetails();
+        Map<String, TableSnapshot> indexSnapshotDetail = indexDirectories.listSnapshots();
         assertTrue(indexSnapshotDetail.containsKey("test"));
         assertEquals(40L, indexSnapshotDetail.get("test").computeTrueSizeBytes());
 

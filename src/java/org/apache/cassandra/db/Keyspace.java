@@ -27,7 +27,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -66,7 +65,7 @@ import org.apache.cassandra.schema.SchemaProvider;
 import org.apache.cassandra.schema.TableId;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.schema.TableMetadataRef;
-import org.apache.cassandra.service.snapshot.TableSnapshotDetails;
+import org.apache.cassandra.service.snapshot.TableSnapshot;
 import org.apache.cassandra.tracing.Tracing;
 import org.apache.cassandra.utils.ByteBufferUtil;
 import org.apache.cassandra.utils.FBUtilities;
@@ -340,8 +339,8 @@ public class Keyspace
         return list;
     }
 
-    public Stream<TableSnapshotDetails> getSnapshotDetails() {
-        return getColumnFamilyStores().stream().flatMap(cfs -> cfs.getSnapshotDetails().values().stream());
+    public Stream<TableSnapshot> getSnapshotDetails() {
+        return getColumnFamilyStores().stream().flatMap(cfs -> cfs.listSnapshots().values().stream());
     }
 
     private Keyspace(String keyspaceName, SchemaProvider schema, boolean loadSSTables)

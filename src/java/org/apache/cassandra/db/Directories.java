@@ -45,7 +45,7 @@ import org.apache.cassandra.io.sstable.*;
 import org.apache.cassandra.schema.SchemaConstants;
 import org.apache.cassandra.schema.TableMetadata;
 import org.apache.cassandra.service.snapshot.SnapshotManifest;
-import org.apache.cassandra.service.snapshot.TableSnapshotDetails;
+import org.apache.cassandra.service.snapshot.TableSnapshot;
 import org.apache.cassandra.utils.DirectorySizeCalculator;
 import org.apache.cassandra.utils.FBUtilities;
 import org.apache.cassandra.utils.JVMStabilityInspector;
@@ -942,26 +942,26 @@ public class Directories
         }
     }
 
-    public Map<String, TableSnapshotDetails> getSnapshotDetails()
+    public Map<String, TableSnapshot> listSnapshots()
     {
         Map<String, Set<File>> snapshotDirsByTag = listSnapshotDirsByTag();
 
-        Map<String, TableSnapshotDetails> snapshots = Maps.newHashMapWithExpectedSize(snapshotDirsByTag.size());
+        Map<String, TableSnapshot> snapshots = Maps.newHashMapWithExpectedSize(snapshotDirsByTag.size());
 
         for (Map.Entry<String, Set<File>> entry : snapshotDirsByTag.entrySet())
         {
             String tag = entry.getKey();
             Set<File> snapshotDirs = entry.getValue();
             SnapshotManifest manifest = maybeLoadManifest(metadata.keyspace, metadata.name, tag, snapshotDirs);
-            snapshots.put(tag, createSnapshotDetails(tag, manifest, snapshotDirs));
+            snapshots.put(tag, buildSnapshot(tag, manifest, snapshotDirs));
         }
 
         return snapshots;
     }
 
-    protected TableSnapshotDetails createSnapshotDetails(String tag, SnapshotManifest manifest, Set<File> snapshotDirs) {
-        return new TableSnapshotDetails(metadata.keyspace, metadata.name, tag, manifest, snapshotDirs,
-                                        this::getTrueAllocatedSizeIn);
+    protected TableSnapshot buildSnapshot(String tag, SnapshotManifest manifest, Set<File> snapshotDirs) {
+        return new TableSnapshot(metadata.keyspace, metadata.name, tag, manifest, snapshotDirs,
+                                 this::getTrueAllocatedSizeIn);
     }
 
     @VisibleForTesting
