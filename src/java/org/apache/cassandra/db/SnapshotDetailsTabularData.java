@@ -21,7 +21,7 @@ import javax.management.openmbean.*;
 
 import com.google.common.base.Throwables;
 import org.apache.cassandra.io.util.FileUtils;
-import org.apache.cassandra.service.snapshot.TableSnapshotDetails;
+import org.apache.cassandra.service.snapshot.TableSnapshot;
 
 public class SnapshotDetailsTabularData
 {
@@ -69,7 +69,7 @@ public class SnapshotDetailsTabularData
     }
 
 
-    public static void from(TableSnapshotDetails details, TabularDataSupport result)
+    public static void from(TableSnapshot details, TabularDataSupport result)
     {
         try
         {

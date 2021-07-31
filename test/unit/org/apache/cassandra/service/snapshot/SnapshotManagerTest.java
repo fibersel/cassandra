@@ -23,30 +23,19 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
-import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import com.google.common.collect.Table;
-import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
 
-import org.apache.cassandra.OrderedJUnit4ClassRunner;
 import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.cql3.CQLTester;
 import org.apache.cassandra.io.util.FileUtils;
 import org.apache.cassandra.service.DefaultFSErrorHandler;
-import org.apache.cassandra.service.StorageService;
-import org.apache.cassandra.tools.NodeProbe;
-import org.apache.cassandra.tools.ToolRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -76,8 +65,8 @@ public class SnapshotManagerTest
     }
 
 
-    private TableSnapshotDetails generateSnapshotDetails(String tag, Instant expiration) throws Exception {
-        return new TableSnapshotDetails(
+    private TableSnapshot generateSnapshotDetails(String tag, Instant expiration) throws Exception {
+        return new TableSnapshot(
             "ks",
             "tbl",
             tag,
@@ -93,13 +82,13 @@ public class SnapshotManagerTest
 
     @Test
     public void testOnlyExpiringSnapshotsIndexing() throws Exception {
-        ArrayList<TableSnapshotDetails> details = new ArrayList<>(Arrays.asList(
+        ArrayList<TableSnapshot> details = new ArrayList<>(Arrays.asList(
             generateSnapshotDetails("expired", Instant.EPOCH),
             generateSnapshotDetails("non-expired", Instant.now().plusMillis(5000)),
             generateSnapshotDetails("non-expiring", null)
         ));
 
-        Function<String, Predicate<TableSnapshotDetails>> tagPredicate = (tagname) -> (dt) -> dt.getTag().equals(tagname);
+        Function<String, Predicate<TableSnapshot>> tagPredicate = (tagname) -> (dt) -> dt.getTag().equals(tagname);
         SnapshotManager manager = new SnapshotManager(3, 3, details::stream);
         manager.loadSnapshots();
 
@@ -110,13 +99,13 @@ public class SnapshotManagerTest
 
     @Test
     public void testClearingOfExpiriedSnapshots() throws Exception {
-        ArrayList<TableSnapshotDetails> details = new ArrayList<>(Arrays.asList(
+        ArrayList<TableSnapshot> details = new ArrayList<>(Arrays.asList(
             generateSnapshotDetails("expired", Instant.EPOCH),
             generateSnapshotDetails("non-expired", Instant.now().plusMillis(50000)),
             generateSnapshotDetails("non-expiring", null)
         ));
 
-        Function<String, Predicate<TableSnapshotDetails>> tagPredicate = (tagname) -> (dt) -> dt.getTag().equals(tagname);
+        Function<String, Predicate<TableSnapshot>> tagPredicate = (tagname) -> (dt) -> dt.getTag().equals(tagname);
         SnapshotManager manager = new SnapshotManager(3, 3, details::stream);
         manager.loadSnapshots();
 
@@ -133,12 +122,12 @@ public class SnapshotManagerTest
 
     @Test
     public void testSnapshotManagerScheduler() throws Exception {
-        ArrayList<TableSnapshotDetails> details = new ArrayList<>(Arrays.asList(
+        ArrayList<TableSnapshot> details = new ArrayList<>(Arrays.asList(
             generateSnapshotDetails("expired", Instant.now().plusMillis(1000)),
             generateSnapshotDetails("non-expiring", null)
         ));
 
-        Function<String, Predicate<TableSnapshotDetails>> tagPredicate = (tagname) -> (dt) -> dt.getTag().equals(tagname);
+        Function<String, Predicate<TableSnapshot>> tagPredicate = (tagname) -> (dt) -> dt.getTag().equals(tagname);
         SnapshotManager manager = new SnapshotManager(1, 3, details::stream);
         manager.start();
 

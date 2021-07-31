@@ -33,7 +33,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import org.apache.cassandra.service.snapshot.TableSnapshotDetails;
+import org.apache.cassandra.service.snapshot.TableSnapshot;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -243,14 +243,14 @@ public class ColumnFamilyStoreTest
         cfs.snapshot("nonEphemeralSnapshot", null, false, false);
         cfs.snapshot("ephemeralSnapshot", null, true, false);
 
-        Map<String, TableSnapshotDetails> snapshotDetails = cfs.getSnapshotDetails();
+        Map<String, TableSnapshot> snapshotDetails = cfs.listSnapshots();
         assertEquals(2, snapshotDetails.size());
         assertTrue(snapshotDetails.containsKey("ephemeralSnapshot"));
         assertTrue(snapshotDetails.containsKey("nonEphemeralSnapshot"));
 
         ColumnFamilyStore.clearEphemeralSnapshots(cfs.getDirectories());
 
-        snapshotDetails = cfs.getSnapshotDetails();
+        snapshotDetails = cfs.listSnapshots();
         assertEquals(1, snapshotDetails.size());
         assertTrue(snapshotDetails.containsKey("nonEphemeralSnapshot"));
 
@@ -467,12 +467,10 @@ public class ColumnFamilyStoreTest
     private void createSnapshotAndDelete(String ks, String table) {
         ColumnFamilyStore cfs = Keyspace.open(ks).getColumnFamilyStore(table);
 
-        cfs.snapshot("basic");
+        TableSnapshot snapshot = cfs.snapshot("basic");
+        snapshot.deleteSnapshot();
 
-        TableSnapshotDetails details = cfs.getSnapshotDetails().get("basic");
-        details.deleteSnapshot();
-
-        assertFalse(cfs.getSnapshotDetails().containsKey("basic"));
+        assertFalse(cfs.listSnapshots().containsKey("basic"));
     }
 
     @Test

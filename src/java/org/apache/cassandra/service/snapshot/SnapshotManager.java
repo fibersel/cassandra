@@ -42,7 +42,7 @@ import org.apache.cassandra.concurrent.ScheduledExecutors;
 public class SnapshotManager {
     private static final Logger logger = LoggerFactory.getLogger(SnapshotManager.class);
 
-    private final Supplier<Stream<TableSnapshotDetails>> snapshotLoader;
+    private final Supplier<Stream<TableSnapshot>> snapshotLoader;
     private final long initialDelaySeconds;
     private final long cleanupPeriodSeconds;
 
@@ -53,7 +53,7 @@ public class SnapshotManager {
      * Expiring ssnapshots ordered by expiration date, to allow only iterating over snapshots
      * that need to be removed on {@link this#clearExpiredSnapshots()}
      */
-    private final PriorityQueue<TableSnapshotDetails> expiringSnapshots = new PriorityQueue<>(Comparator.comparing(x -> x.getExpiresAt()));
+    private final PriorityQueue<TableSnapshot> expiringSnapshots = new PriorityQueue<>(Comparator.comparing(x -> x.getExpiresAt()));
 
     public SnapshotManager()
     {
@@ -65,14 +65,14 @@ public class SnapshotManager {
 
     @VisibleForTesting
     protected SnapshotManager(long initialDelaySeconds, long cleanupPeriodSeconds,
-                              Supplier<Stream<TableSnapshotDetails>> snapshotLoader)
+                              Supplier<Stream<TableSnapshot>> snapshotLoader)
     {
         this.initialDelaySeconds = initialDelaySeconds;
         this.cleanupPeriodSeconds = cleanupPeriodSeconds;
         this.snapshotLoader = snapshotLoader;
     }
 
-    public Collection<TableSnapshotDetails> getExpiringSnapshots()
+    public Collection<TableSnapshot> getExpiringSnapshots()
     {
         return expiringSnapshots;
     }
@@ -87,7 +87,7 @@ public class SnapshotManager {
         expiringSnapshots.clear();
     }
 
-    public synchronized void addSnapshot(TableSnapshotDetails snapshot) {
+    public synchronized void addSnapshot(TableSnapshot snapshot) {
         // We currently only care about expiring snapshots
         if (snapshot.isExpiring()) {
             logger.info("Adding expiring snapshot {}", snapshot);
@@ -115,7 +115,7 @@ public class SnapshotManager {
     protected synchronized void clearExpiredSnapshots() {
         Instant now = Instant.now();
         while (!expiringSnapshots.isEmpty() && expiringSnapshots.peek().isExpired(now)) {
-            TableSnapshotDetails expiredSnapshot = expiringSnapshots.poll();
+            TableSnapshot expiredSnapshot = expiringSnapshots.poll();
             expiredSnapshot.deleteSnapshot();
         }
     }
