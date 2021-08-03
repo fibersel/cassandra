@@ -22,6 +22,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
@@ -35,6 +36,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import org.apache.cassandra.config.Duration;
 import org.apache.cassandra.cql3.ColumnIdentifier;
 import org.apache.cassandra.schema.Indexes;
 import org.apache.cassandra.schema.SchemaConstants;
@@ -55,6 +57,7 @@ import org.apache.cassandra.io.sstable.format.SSTableFormat;
 import org.apache.cassandra.io.util.FileUtils;
 import org.apache.cassandra.schema.IndexMetadata;
 import org.apache.cassandra.service.DefaultFSErrorHandler;
+import org.apache.cassandra.service.snapshot.SnapshotManifest;
 import org.apache.cassandra.service.snapshot.TableSnapshot;
 import org.apache.cassandra.utils.JVMStabilityInspector;
 
@@ -178,6 +181,94 @@ public class DirectoriesTest
 
             File backupsDir = new File(cfDir(cfm),  File.separator + Directories.BACKUPS_SUBDIR);
             assertEquals(backupsDir.getCanonicalFile(), Directories.getBackupsDirectory(desc));
+        }
+    }
+
+    @Test
+    public void testSnapshotsListing() throws Exception {
+        for (TableMetadata cfm : CFM)
+        {
+            String tag = "test";
+            Directories directories = new Directories(cfm, toDataDirectories(tempDataDir));
+            Descriptor parentDesc = new Descriptor(directories.getDirectoryForNewSSTables(), KS, cfm.name, 0, SSTableFormat.Type.BIG);
+            File parentSnapshotDirectory = Directories.getSnapshotDirectory(parentDesc, tag);
+
+            List<String> files = new LinkedList<>();
+            files.add(parentSnapshotDirectory.getAbsolutePath());
+
+            File manifestFile = directories.getSnapshotManifestFile(tag);
+
+            SnapshotManifest manifest = new SnapshotManifest(files, new Duration("1m"));
+
+            manifest.serializeToJsonFile(manifestFile);
+
+
+            Map<String, TableSnapshot> snaps = directories.listSnapshots();
+
+            assertTrue(snaps.containsKey(tag));
+            assertFalse(snaps.get(tag).isDeleted());
+            snaps.get(tag).deleteSnapshot();
+            assertFalse(directories.listSnapshots().containsKey(tag));
+        }
+    }
+
+    @Test
+    public void testSnapshotsListingByTag() throws Exception {
+        for (TableMetadata cfm : CFM)
+        {
+            String tag = "test";
+            Directories directories = new Directories(cfm, toDataDirectories(tempDataDir));
+            Descriptor parentDesc = new Descriptor(directories.getDirectoryForNewSSTables(), KS, cfm.name, 0, SSTableFormat.Type.BIG);
+            File parentSnapshotDirectory = Directories.getSnapshotDirectory(parentDesc, tag);
+
+            List<String> files = new LinkedList<>();
+            files.add(parentSnapshotDirectory.getAbsolutePath());
+
+            File manifestFile = directories.getSnapshotManifestFile(tag);
+
+            SnapshotManifest manifest = new SnapshotManifest(files, new Duration("1m"));
+
+            manifest.serializeToJsonFile(manifestFile);
+
+
+            Map<String, Set<File>> snaps = directories.listSnapshotDirsByTag();
+
+            assertTrue(snaps.containsKey(tag));
+            assertFalse(snaps.get(tag).contains(parentSnapshotDirectory));
+            directories.listSnapshots().get(tag).deleteSnapshot();
+
+            assertFalse(directories.listSnapshotDirsByTag().containsKey(tag));
+        }
+    }
+
+    @Test
+    public void testMaybeManifestLoading() throws Exception {
+        for (TableMetadata cfm : CFM)
+        {
+            String tag = "test";
+            Directories directories = new Directories(cfm, toDataDirectories(tempDataDir));
+            Descriptor parentDesc = new Descriptor(directories.getDirectoryForNewSSTables(), KS, cfm.name, 0, SSTableFormat.Type.BIG);
+            File parentSnapshotDirectory = Directories.getSnapshotDirectory(parentDesc, tag);
+
+            List<String> files = new LinkedList<>();
+            files.add(parentSnapshotDirectory.getAbsolutePath());
+
+            File manifestFile = directories.getSnapshotManifestFile(tag);
+
+            SnapshotManifest manifest = new SnapshotManifest(files, new Duration("1m"));
+            Instant expiration = manifest.getExpiresAt();
+            Instant creation = manifest.getCreatedAt();
+
+            manifest.serializeToJsonFile(manifestFile);
+
+            Set<File> dirs = new HashSet<>();
+
+            dirs.add(manifestFile.getParentFile());
+            dirs.add(new File("buzz"));
+            SnapshotManifest loadedManifest = Directories.maybeLoadManifest(KS, cfm.name, tag, dirs);
+
+            assertEquals(expiration, loadedManifest.getExpiresAt());
+            assertEquals(creation, loadedManifest.getCreatedAt());
         }
     }
 
