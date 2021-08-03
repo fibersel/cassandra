@@ -38,6 +38,7 @@ public class SnapshotsTTLTest extends TestBaseImpl
     public static final Integer SNAPSHOT_TTL_SECONDS = 2;
     private static WithProperties properties = new WithProperties();
     private static Cluster cluster;
+    private static String msg;
 
     @BeforeClass
     public static void before() throws IOException
@@ -46,6 +47,7 @@ public class SnapshotsTTLTest extends TestBaseImpl
         properties.set(CassandraRelevantProperties.SNAPSHOT_CLEANUP_PERIOD_SECONDS, SNAPSHOT_TTL_SECONDS);
         properties.set(CassandraRelevantProperties.SNAPSHOT_MIN_ALLOWED_TTL_SECONDS, SNAPSHOT_TTL_SECONDS);
         cluster = init(Cluster.build(1).withConfig(c -> c.with(Feature.NETWORK)).start());
+        msg = String.format("ttl for snapshot must be at least %d seconds", SNAPSHOT_TTL_SECONDS);
     }
 
     @AfterClass
@@ -79,5 +81,15 @@ public class SnapshotsTTLTest extends TestBaseImpl
 
         instance.startup();
         cluster.get(1).nodetoolResult("listsnapshots").asserts().success().stdoutNotContains("basic");
+    }
+
+    @Test
+    public void testSnapshotInvalidArgument() throws Exception {
+        IInvokableInstance instance = cluster.get(1);
+
+        instance.nodetoolResult("snapshot", "--ttl", String.format("%ds", 1),
+                                "-t", "basic").asserts().failure().stdoutContains(msg);
+
+        instance.nodetoolResult("snapshot","--ttl","invalid-ttl").asserts().failure();
     }
 }
