@@ -68,7 +68,8 @@ public class TableSnapshotTest
         "ks",
         "tbl",
         "some",
-        new SnapshotManifest(Arrays.asList("db1", "db2", "db3"), new Duration("3m")),
+        null,
+        null,
         folders,
         (File file) -> { return 0L; }
         );
@@ -98,7 +99,8 @@ public class TableSnapshotTest
         "ks",
         "tbl",
         "some",
-        new SnapshotManifest(Arrays.asList("db1", "db2", "db3"), new Duration("3m")),
+        null,
+        null,
         folders,
         (File file) -> { return 0L; }
         );
@@ -123,7 +125,8 @@ public class TableSnapshotTest
         "ks",
         "tbl",
         "some",
-        new SnapshotManifest(Arrays.asList("db1", "db2", "db3"), new Duration("3m")),
+        null,
+        null,
         folders,
         File::length
         );
