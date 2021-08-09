@@ -24,8 +24,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 
-import com.google.common.annotations.VisibleForTesting;
-
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -60,13 +58,6 @@ public class SnapshotManifest
         this.files = null;
         this.createdAt = null;
         this.expiresAt = null;
-    }
-
-    @VisibleForTesting
-    protected SnapshotManifest(List<String> files, Instant createdAt, Instant expiresAt) {
-        this.files = files;
-        this.createdAt = createdAt;
-        this.expiresAt = expiresAt;
     }
 
     public SnapshotManifest(List<String> files, Duration ttl)

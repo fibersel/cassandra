@@ -1886,8 +1886,8 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
             snapshotDirs.add(ephemeralSnapshotMarker.getParentFile()); // marker may create empty snapshot dir
         }
 
-        TableSnapshot snapshot = new TableSnapshot(metadata.keyspace, metadata.name, tag, manifest, snapshotDirs,
-                                                   directories::getTrueAllocatedSizeIn);
+        TableSnapshot snapshot = new TableSnapshot(metadata.keyspace, metadata.name, tag, manifest.createdAt,
+                                                   manifest.expiresAt, snapshotDirs, directories::getTrueAllocatedSizeIn);
 
         StorageService.instance.addSnapshot(snapshot);
         return snapshot;

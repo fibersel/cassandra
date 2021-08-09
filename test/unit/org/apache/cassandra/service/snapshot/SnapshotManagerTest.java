@@ -74,11 +74,8 @@ public class SnapshotManagerTest
             "ks",
             "tbl",
             tag,
-            new SnapshotManifest(
-                Arrays.asList("db1", "db2", "db3"),
-                Instant.EPOCH,
-                expiration
-            ),
+            Instant.EPOCH,
+            expiration,
             createFolders(),
             (file) -> 0L
         );

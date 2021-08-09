@@ -24,8 +24,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 
-import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.db.Directories;
 import org.apache.cassandra.io.util.FileUtils;
 
 public class TableSnapshot
@@ -40,14 +38,15 @@ public class TableSnapshot
     private final Set<File> snapshotDirs;
     private final Function<File, Long> trueDiskSizeComputer;
 
-    public TableSnapshot(String keyspace, String table, String tag, SnapshotManifest manifest,
-                         Set<File> snapshotDirs, Function<File, Long> trueDiskSizeComputer)
+    public TableSnapshot(String keyspace, String table, String tag, Instant createdAt,
+                         Instant expiresAt, Set<File> snapshotDirs,
+                         Function<File, Long> trueDiskSizeComputer)
     {
         this.keyspace = keyspace;
         this.table = table;
         this.tag = tag;
-        this.createdAt = manifest == null ? null : manifest.createdAt;
-        this.expiresAt = manifest == null ? null : manifest.expiresAt;
+        this.createdAt = createdAt;
+        this.expiresAt = expiresAt;
         this.snapshotDirs = snapshotDirs;
         this.trueDiskSizeComputer = trueDiskSizeComputer;
     }
