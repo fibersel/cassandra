@@ -22,7 +22,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executors;
@@ -256,9 +255,6 @@ public class DirectoriesTest
             File manifestFile = directories.getSnapshotManifestFile(tag);
 
             SnapshotManifest manifest = new SnapshotManifest(files, new Duration("1m"));
-            Instant expiration = manifest.getExpiresAt();
-            Instant creation = manifest.getCreatedAt();
-
             manifest.serializeToJsonFile(manifestFile);
 
             Set<File> dirs = new HashSet<>();
@@ -267,8 +263,7 @@ public class DirectoriesTest
             dirs.add(new File("buzz"));
             SnapshotManifest loadedManifest = Directories.maybeLoadManifest(KS, cfm.name, tag, dirs);
 
-            assertEquals(expiration, loadedManifest.getExpiresAt());
-            assertEquals(creation, loadedManifest.getCreatedAt());
+            assertEquals(manifest, loadedManifest);
         }
     }
 
