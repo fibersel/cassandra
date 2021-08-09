@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -98,7 +99,7 @@ public class SnapshotManagerTest
     }
 
     @Test
-    public void testClearingOfExpiriedSnapshots() throws Exception {
+    public void testClearingOfExpiredSnapshots() throws Exception {
         ArrayList<TableSnapshot> details = new ArrayList<>(Arrays.asList(
             generateSnapshotDetails("expired", Instant.EPOCH),
             generateSnapshotDetails("non-expired", Instant.now().plusMillis(50000)),
@@ -115,9 +116,9 @@ public class SnapshotManagerTest
 
         manager.clearExpiredSnapshots();
 
-        assertThat(details.get(0).isDeleted()).isEqualTo(true);
-        assertThat(details.get(1).isDeleted()).isEqualTo(false);
-        assertThat(details.get(2).isDeleted()).isEqualTo(false);
+        assertThat(details.get(0).exists()).isFalse();
+        assertThat(details.get(1).exists()).isTrue();
+        assertThat(details.get(2).exists()).isTrue();
     }
 
     @Test
@@ -133,8 +134,26 @@ public class SnapshotManagerTest
 
         Thread.sleep(4000);
 
-        assertThat(details.get(0).isDeleted()).isEqualTo(true);
-        assertThat(details.get(1).isDeleted()).isEqualTo(false);
+        assertThat(details.get(0).exists()).isFalse();
+        assertThat(details.get(1).exists()).isTrue();
         assertThat(manager.getExpiringSnapshots()).isEmpty();
+    }
+
+    @Test
+    public void testDeleteSnapshot() throws Exception
+    {
+        // Given
+        SnapshotManager manager = new SnapshotManager(1, 3, Stream::empty);
+        TableSnapshot expiringSnapshot = generateSnapshotDetails("snapshot", Instant.now().plusMillis(50000));
+        manager.addSnapshot(expiringSnapshot);
+        assertThat(manager.getExpiringSnapshots()).contains(expiringSnapshot);
+        assertThat(expiringSnapshot.exists()).isTrue();
+
+        // When
+        manager.clearSnapshot(expiringSnapshot);
+
+        // Then
+        assertThat(manager.getExpiringSnapshots()).doesNotContain(expiringSnapshot);
+        assertThat(expiringSnapshot.exists()).isFalse();
     }
 }

@@ -60,11 +60,11 @@ public class TableSnapshotTest
     }
 
     @Test
-    public void testSnapshotDirsRemoval() throws IOException
+    public void testSnapshotExists() throws IOException
     {
         Set<File> folders = createFolders();
 
-        TableSnapshot tableDetails = new TableSnapshot(
+        TableSnapshot snapshot = new TableSnapshot(
         "ks",
         "tbl",
         "some",
@@ -73,11 +73,11 @@ public class TableSnapshotTest
         (File file) -> { return 0L; }
         );
 
-        tableDetails.deleteSnapshot();
+        assertThat(snapshot.exists()).isTrue();
 
-        for (File file : folders) {
-            assertThat(file).doesNotExist();
-        }
+        folders.forEach(snapshotDir -> FileUtils.deleteRecursive(snapshotDir));
+
+        assertThat(snapshot.exists()).isFalse();
     }
 
     private Long writeBatchToFile(File file) throws IOException {

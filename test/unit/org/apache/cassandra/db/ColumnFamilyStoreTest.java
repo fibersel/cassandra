@@ -468,7 +468,7 @@ public class ColumnFamilyStoreTest
         ColumnFamilyStore cfs = Keyspace.open(ks).getColumnFamilyStore(table);
 
         TableSnapshot snapshot = cfs.snapshot("basic");
-        snapshot.deleteSnapshot();
+
 
         assertFalse(cfs.listSnapshots().containsKey("basic"));
     }
