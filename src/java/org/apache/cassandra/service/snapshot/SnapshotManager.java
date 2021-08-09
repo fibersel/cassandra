@@ -18,6 +18,7 @@
 package org.apache.cassandra.service.snapshot;
 
 
+import java.io.File;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Comparator;
@@ -30,6 +31,8 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.concurrent.DebuggableScheduledThreadPoolExecutor;
 import org.apache.cassandra.config.CassandraRelevantProperties;
+import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.db.Directories;
 import org.apache.cassandra.db.Keyspace;
 
 import java.util.concurrent.TimeoutException;
@@ -130,8 +133,21 @@ public class SnapshotManager {
         while (!expiringSnapshots.isEmpty() && expiringSnapshots.peek().isExpired(now))
         {
             TableSnapshot expiredSnapshot = expiringSnapshots.poll();
-            expiredSnapshot.deleteSnapshot();
+            logger.debug("Removing expired snapshot {}.", expiredSnapshot);
+            clearSnapshot(expiredSnapshot);
         }
+    }
+
+    /**
+     * Deletes snapshot and remove it from manager
+     */
+    protected void clearSnapshot(TableSnapshot snapshot)
+    {
+        for (File snapshotDir : snapshot.getDirectories())
+        {
+            Directories.removeSnapshotDirectory(DatabaseDescriptor.getSnapshotRateLimiter(), snapshotDir);
+        }
+        expiringSnapshots.remove(snapshot);
     }
 
     @VisibleForTesting

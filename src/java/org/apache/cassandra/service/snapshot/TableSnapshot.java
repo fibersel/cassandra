@@ -19,6 +19,7 @@ package org.apache.cassandra.service.snapshot;
 
 import java.io.File;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
@@ -38,7 +39,6 @@ public class TableSnapshot
 
     private final Set<File> snapshotDirs;
     private final Function<File, Long> trueDiskSizeComputer;
-    private boolean deleted;
 
     public TableSnapshot(String keyspace, String table, String tag, SnapshotManifest manifest,
                          Set<File> snapshotDirs, Function<File, Long> trueDiskSizeComputer)
@@ -85,8 +85,8 @@ public class TableSnapshot
         return expiresAt.compareTo(now) < 0;
     }
 
-    public boolean isDeleted() {
-        return deleted;
+    public boolean exists() {
+        return snapshotDirs.stream().anyMatch(s -> s.exists());
     }
 
     public boolean isExpiring() {
@@ -103,21 +103,22 @@ public class TableSnapshot
         return snapshotDirs.stream().mapToLong(trueDiskSizeComputer::apply).sum();
     }
 
-    public void deleteSnapshot()
+    public Collection<File> getDirectories()
     {
-        // Schema.instance.getKeyspaceInstance(keyspace).getColumnFamilyStore(table).clearSnapshot(tag);
-
-        for (File snapshotDir : snapshotDirs) {
-            Directories.removeSnapshotDirectory(DatabaseDescriptor.getSnapshotRateLimiter(), snapshotDir);
-        }
-        deleted = true;
+        return snapshotDirs;
     }
 
     @Override
     public String toString()
     {
-
-        return String.format("%s.%s.%s", keyspace, table, tag);
+        return "TableSnapshot{" +
+               "keyspace='" + keyspace + '\'' +
+               ", table='" + table + '\'' +
+               ", tag='" + tag + '\'' +
+               ", createdAt=" + createdAt +
+               ", expiresAt=" + expiresAt +
+               ", snapshotDirs=" + snapshotDirs +
+               '}';
     }
 
     @Override
@@ -126,12 +127,12 @@ public class TableSnapshot
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TableSnapshot that = (TableSnapshot) o;
-        return keyspace.equals(that.keyspace) && table.equals(that.table) && tag.equals(that.tag);
+        return Objects.equals(keyspace, that.keyspace) && Objects.equals(table, that.table) && Objects.equals(tag, that.tag) && Objects.equals(createdAt, that.createdAt) && Objects.equals(expiresAt, that.expiresAt) && Objects.equals(snapshotDirs, that.snapshotDirs);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(keyspace, table, tag);
+        return Objects.hash(keyspace, table, tag, createdAt, expiresAt, snapshotDirs);
     }
 }

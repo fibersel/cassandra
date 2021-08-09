@@ -549,6 +549,11 @@ public class Directories
     public File getSnapshotManifestFile(String snapshotName)
     {
         File snapshotDir = getSnapshotDirectory(getDirectoryForNewSSTables(), snapshotName);
+        return getSnapshotManifestFile(snapshotDir);
+    }
+
+    protected static File getSnapshotManifestFile(File snapshotDir)
+    {
         return new File(snapshotDir, "manifest.json");
     }
 
