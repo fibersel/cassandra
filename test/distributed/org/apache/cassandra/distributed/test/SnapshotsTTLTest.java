@@ -44,9 +44,9 @@ public class SnapshotsTTLTest extends TestBaseImpl
     public static void before() throws IOException
     {
         properties.set(CassandraRelevantProperties.SNAPSHOT_CLEANUP_INITIAL_DELAY_SECONDS, 0);
-        properties.set(CassandraRelevantProperties.SNAPSHOT_CLEANUP_PERIOD_SECONDS, SNAPSHOT_TTL_SECONDS);
+        properties.set(CassandraRelevantProperties.SNAPSHOT_CLEANUP_PERIOD_SECONDS, SNAPSHOT_CLEANUP_PERIOD_SECONDS);
         properties.set(CassandraRelevantProperties.SNAPSHOT_MIN_ALLOWED_TTL_SECONDS, SNAPSHOT_TTL_SECONDS);
-        cluster = init(Cluster.build(1).withConfig(c -> c.with(Feature.NETWORK)).start());
+        cluster = init(Cluster.build(1).withConfig(c -> c.with(Feature.GOSSIP)).start());
         msg = String.format("ttl for snapshot must be at least %d seconds", SNAPSHOT_TTL_SECONDS);
     }
 

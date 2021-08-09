@@ -28,18 +28,23 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.cassandra.concurrent.DebuggableScheduledThreadPoolExecutor;
 import org.apache.cassandra.config.CassandraRelevantProperties;
 import org.apache.cassandra.db.Keyspace;
 
+import java.util.concurrent.TimeoutException;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import org.apache.cassandra.concurrent.ScheduledExecutors;
+import org.apache.cassandra.utils.ExecutorUtils;
 
 public class SnapshotManager {
+
+    private static final DebuggableScheduledThreadPoolExecutor executor = new DebuggableScheduledThreadPoolExecutor("SnapshotCleanup");
+
     private static final Logger logger = LoggerFactory.getLogger(SnapshotManager.class);
 
     private final Supplier<Stream<TableSnapshot>> snapshotLoader;
@@ -77,26 +82,32 @@ public class SnapshotManager {
         return expiringSnapshots;
     }
 
-    public synchronized void start() {
+    public synchronized void start()
+    {
         loadSnapshots();
         resumeSnapshotCleanup();
     }
 
-    public synchronized void shutdown() {
-        cleanupTaskFuture.cancel(false);
+    public synchronized void shutdown() throws InterruptedException, TimeoutException
+    {
         expiringSnapshots.clear();
+        cleanupTaskFuture.cancel(false);
+        shutdownAndWait(1L, TimeUnit.MINUTES);
     }
 
-    public synchronized void addSnapshot(TableSnapshot snapshot) {
+    public synchronized void addSnapshot(TableSnapshot snapshot)
+    {
         // We currently only care about expiring snapshots
-        if (snapshot.isExpiring()) {
-            logger.info("Adding expiring snapshot {}", snapshot);
+        if (snapshot.isExpiring())
+        {
+            logger.debug("Adding expiring snapshot {}", snapshot);
             expiringSnapshots.add(snapshot);
         }
     }
 
     @VisibleForTesting
-    protected synchronized void loadSnapshots() {
+    protected synchronized void loadSnapshots()
+    {
         logger.debug("Loading snapshots");
         snapshotLoader.get().forEach(this::addSnapshot);
     }
@@ -104,19 +115,28 @@ public class SnapshotManager {
     // TODO: Support pausing snapshot cleanup
     private synchronized void resumeSnapshotCleanup()
     {
-        if (cleanupTaskFuture == null) {
-            logger.info("Scheduling expired snapshot cleanup");
-            cleanupTaskFuture = ScheduledExecutors.scheduledTasks.scheduleWithFixedDelay(
-            this::clearExpiredSnapshots, initialDelaySeconds, cleanupPeriodSeconds, TimeUnit.SECONDS);
+        if (cleanupTaskFuture == null)
+        {
+            logger.info("Scheduling expired snapshot cleanup with initialDelaySeconds={} and cleanupPeriodSeconds={}");
+            cleanupTaskFuture = executor.scheduleWithFixedDelay(this::clearExpiredSnapshots, initialDelaySeconds,
+                                                                cleanupPeriodSeconds, TimeUnit.SECONDS);
         }
     }
 
     @VisibleForTesting
-    protected synchronized void clearExpiredSnapshots() {
+    protected synchronized void clearExpiredSnapshots()
+    {
         Instant now = Instant.now();
-        while (!expiringSnapshots.isEmpty() && expiringSnapshots.peek().isExpired(now)) {
+        while (!expiringSnapshots.isEmpty() && expiringSnapshots.peek().isExpired(now))
+        {
             TableSnapshot expiredSnapshot = expiringSnapshots.poll();
             expiredSnapshot.deleteSnapshot();
         }
+    }
+
+    @VisibleForTesting
+    public static void shutdownAndWait(long timeout, TimeUnit unit) throws InterruptedException, TimeoutException
+    {
+        ExecutorUtils.shutdownNowAndWait(timeout, unit, executor);
     }
 }
