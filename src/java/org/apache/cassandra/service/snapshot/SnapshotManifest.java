@@ -22,6 +22,7 @@ import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -98,5 +99,20 @@ public class SnapshotManifest
     public static SnapshotManifest deserializeFromJsonFile(File file) throws IOException
     {
         return mapper.readValue(file, SnapshotManifest.class);
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        SnapshotManifest manifest = (SnapshotManifest) o;
+        return Objects.equals(files, manifest.files) && Objects.equals(createdAt, manifest.createdAt) && Objects.equals(expiresAt, manifest.expiresAt);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(files, createdAt, expiresAt);
     }
 }
