@@ -1889,7 +1889,7 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
         TableSnapshot snapshot = new TableSnapshot(metadata.keyspace, metadata.name, tag, manifest, snapshotDirs,
                                                    directories::getTrueAllocatedSizeIn);
 
-        StorageService.instance.snapshotManager.addSnapshot(snapshot);
+        StorageService.instance.addSnapshot(snapshot);
         return snapshot;
     }
 
