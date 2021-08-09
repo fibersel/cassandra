@@ -110,6 +110,7 @@ public class TableSnapshotTest
             res += FileUtils.folderSize(dir);
         }
 
+        assertThat(tableDetails.computeSizeOnDiskBytes()).isGreaterThan(0L);
         assertThat(tableDetails.computeSizeOnDiskBytes()).isEqualTo(res);
     }
 
@@ -130,9 +131,11 @@ public class TableSnapshotTest
         Long res = 0L;
 
         for (File dir : folders) {
+            writeBatchToFile(new File(dir, "tmp"));
             res += dir.length();
         }
 
+        assertThat(tableDetails.computeTrueSizeBytes()).isGreaterThan(0L);
         assertThat(tableDetails.computeTrueSizeBytes()).isEqualTo(res);
     }
 }
