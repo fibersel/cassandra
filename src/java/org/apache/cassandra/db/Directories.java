@@ -19,6 +19,7 @@ package org.apache.cassandra.db;
 
 import java.io.*;
 import java.nio.file.*;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiPredicate;
@@ -549,6 +550,11 @@ public class Directories
     public File getSnapshotManifestFile(String snapshotName)
     {
         File snapshotDir = getSnapshotDirectory(getDirectoryForNewSSTables(), snapshotName);
+        return getSnapshotManifestFile(snapshotDir);
+    }
+
+    protected static File getSnapshotManifestFile(File snapshotDir)
+    {
         return new File(snapshotDir, "manifest.json");
     }
 
@@ -960,7 +966,9 @@ public class Directories
     }
 
     protected TableSnapshot buildSnapshot(String tag, SnapshotManifest manifest, Set<File> snapshotDirs) {
-        return new TableSnapshot(metadata.keyspace, metadata.name, tag, manifest, snapshotDirs,
+        Instant createdAt = manifest == null ? null : manifest.createdAt;
+        Instant expiresAt = manifest == null ? null : manifest.expiresAt;
+        return new TableSnapshot(metadata.keyspace, metadata.name, tag, createdAt, expiresAt, snapshotDirs,
                                  this::getTrueAllocatedSizeIn);
     }
 

@@ -191,7 +191,7 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
     private final List<Runnable> preShutdownHooks = new ArrayList<>();
     private final List<Runnable> postShutdownHooks = new ArrayList<>();
 
-    public final SnapshotManager snapshotManager = new SnapshotManager();
+    private final SnapshotManager snapshotManager = new SnapshotManager();
 
     public static final StorageService instance = new StorageService();
 
@@ -5968,5 +5968,9 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
             throw new IllegalStateException("Keyspace count warn threshold should be positive, not "+value);
         logger.info("Changing keyspace count warn threshold from {} to {}", getKeyspaceCountWarnThreshold(), value);
         DatabaseDescriptor.setKeyspaceCountWarnThreshold(value);
+    }
+
+    public void addSnapshot(TableSnapshot snapshot) {
+        snapshotManager.addSnapshot(snapshot);
     }
 }

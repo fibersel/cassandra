@@ -24,9 +24,11 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import org.junit.BeforeClass;
 import org.junit.ClassRule;
@@ -41,6 +43,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class SnapshotManagerTest
 {
+    static long ONE_DAY_SECS = 86400;
+
     @BeforeClass
     public static void beforeClass()
     {
@@ -70,71 +74,111 @@ public class SnapshotManagerTest
             "ks",
             "tbl",
             tag,
-            new SnapshotManifest(
-                Arrays.asList("db1", "db2", "db3"),
-                Instant.EPOCH,
-                expiration
-            ),
+            Instant.EPOCH,
+            expiration,
             createFolders(),
             (file) -> 0L
         );
     }
 
     @Test
-    public void testOnlyExpiringSnapshotsIndexing() throws Exception {
-        ArrayList<TableSnapshot> details = new ArrayList<>(Arrays.asList(
-            generateSnapshotDetails("expired", Instant.EPOCH),
-            generateSnapshotDetails("non-expired", Instant.now().plusMillis(5000)),
-            generateSnapshotDetails("non-expiring", null)
-        ));
+    public void testLoadSnapshots() throws Exception {
+        TableSnapshot expired = generateSnapshotDetails("expired", Instant.EPOCH);
+        TableSnapshot nonExpired = generateSnapshotDetails("non-expired", Instant.now().plusSeconds(ONE_DAY_SECS));
+        TableSnapshot nonExpiring = generateSnapshotDetails("non-expiring", null);
+        List<TableSnapshot> snapshots = Arrays.asList(expired, nonExpired, nonExpiring);
 
-        Function<String, Predicate<TableSnapshot>> tagPredicate = (tagname) -> (dt) -> dt.getTag().equals(tagname);
-        SnapshotManager manager = new SnapshotManager(3, 3, details::stream);
+        // Create SnapshotManager with 3 snapshots: expired, non-expired and non-expiring
+        SnapshotManager manager = new SnapshotManager(3, 3, snapshots::stream);
         manager.loadSnapshots();
 
-        assertThat(manager.getExpiringSnapshots().stream().filter(tagPredicate.apply("expired"))).hasSize(1);
-        assertThat(manager.getExpiringSnapshots().stream().filter(tagPredicate.apply("non-expired"))).hasSize(1);
-        assertThat(manager.getExpiringSnapshots().stream().filter(tagPredicate.apply("non-expiring"))).hasSize(0);
+        // Only expiring snapshots should be loaded
+        assertThat(manager.getExpiringSnapshots()).hasSize(2);
+        assertThat(manager.getExpiringSnapshots()).contains(expired);
+        assertThat(manager.getExpiringSnapshots()).contains(nonExpired);
     }
 
     @Test
-    public void testClearingOfExpiriedSnapshots() throws Exception {
-        ArrayList<TableSnapshot> details = new ArrayList<>(Arrays.asList(
-            generateSnapshotDetails("expired", Instant.EPOCH),
-            generateSnapshotDetails("non-expired", Instant.now().plusMillis(50000)),
-            generateSnapshotDetails("non-expiring", null)
-        ));
+    public void testClearExpiredSnapshots() throws Exception {
+        SnapshotManager manager = new SnapshotManager(3, 3, Stream::empty);
 
-        Function<String, Predicate<TableSnapshot>> tagPredicate = (tagname) -> (dt) -> dt.getTag().equals(tagname);
-        SnapshotManager manager = new SnapshotManager(3, 3, details::stream);
-        manager.loadSnapshots();
+        // Add 3 snapshots: expired, non-expired and non-expiring
+        TableSnapshot expired = generateSnapshotDetails("expired", Instant.EPOCH);
+        TableSnapshot nonExpired = generateSnapshotDetails("non-expired", Instant.now().plusMillis(ONE_DAY_SECS));
+        TableSnapshot nonExpiring = generateSnapshotDetails("non-expiring", null);
+        manager.addSnapshot(expired);
+        manager.addSnapshot(nonExpired);
+        manager.addSnapshot(nonExpiring);
 
-        assertThat(manager.getExpiringSnapshots().stream().filter(tagPredicate.apply("expired"))).hasSize(1);
-        assertThat(manager.getExpiringSnapshots().stream().filter(tagPredicate.apply("non-expired"))).hasSize(1);
-        assertThat(manager.getExpiringSnapshots().stream().filter(tagPredicate.apply("non-expiring"))).hasSize(0);
+        // Only expiring snapshot should be indexed and all should exist
+        assertThat(manager.getExpiringSnapshots()).hasSize(2);
+        assertThat(manager.getExpiringSnapshots()).contains(expired);
+        assertThat(manager.getExpiringSnapshots()).contains(nonExpired);
+        assertThat(expired.exists()).isTrue();
+        assertThat(nonExpired.exists()).isTrue();
+        assertThat(nonExpiring.exists()).isTrue();
 
+        // After clearing expired snapshots, expired snapshot should be removed while the others should remain
         manager.clearExpiredSnapshots();
-
-        assertThat(details.get(0).isDeleted()).isEqualTo(true);
-        assertThat(details.get(1).isDeleted()).isEqualTo(false);
-        assertThat(details.get(2).isDeleted()).isEqualTo(false);
+        assertThat(manager.getExpiringSnapshots()).hasSize(1);
+        assertThat(manager.getExpiringSnapshots()).contains(nonExpired);
+        assertThat(expired.exists()).isFalse();
+        assertThat(nonExpired.exists()).isTrue();
+        assertThat(nonExpiring.exists()).isTrue();
     }
 
     @Test
-    public void testSnapshotManagerScheduler() throws Exception {
-        ArrayList<TableSnapshot> details = new ArrayList<>(Arrays.asList(
-            generateSnapshotDetails("expired", Instant.now().plusMillis(1000)),
-            generateSnapshotDetails("non-expiring", null)
-        ));
+    public void testScheduledCleanup() throws Exception {
+        SnapshotManager manager = new SnapshotManager(0, 1, Stream::empty);
+        try
+        {
+            // Start snapshot manager which should start expired snapshot cleanup thread
+            manager.start();
 
-        Function<String, Predicate<TableSnapshot>> tagPredicate = (tagname) -> (dt) -> dt.getTag().equals(tagname);
-        SnapshotManager manager = new SnapshotManager(1, 3, details::stream);
-        manager.start();
+            // Add 2 expiring snapshots: one to expire in 2 seconds, another in 1 day
+            int TTL_SECS = 2;
+            TableSnapshot toExpire = generateSnapshotDetails("to-expire", Instant.now().plusSeconds(TTL_SECS));
+            TableSnapshot nonExpired = generateSnapshotDetails("non-expired", Instant.now().plusMillis(ONE_DAY_SECS));
+            manager.addSnapshot(toExpire);
+            manager.addSnapshot(nonExpired);
 
-        Thread.sleep(4000);
+            // Check both snapshots still exist
+            assertThat(toExpire.exists()).isTrue();
+            assertThat(nonExpired.exists()).isTrue();
+            assertThat(manager.getExpiringSnapshots()).hasSize(2);
+            assertThat(manager.getExpiringSnapshots()).contains(toExpire);
+            assertThat(manager.getExpiringSnapshots()).contains(nonExpired);
 
-        assertThat(details.get(0).isDeleted()).isEqualTo(true);
-        assertThat(details.get(1).isDeleted()).isEqualTo(false);
-        assertThat(manager.getExpiringSnapshots()).isEmpty();
+            // Sleep 3 seconds
+            Thread.sleep((TTL_SECS + 1) * 1000L);
+
+            // Snapshot with ttl=2s should be gone, while other should remain
+            assertThat(manager.getExpiringSnapshots()).hasSize(1);
+            assertThat(manager.getExpiringSnapshots()).contains(nonExpired);
+            assertThat(toExpire.exists()).isFalse();
+            assertThat(nonExpired.exists()).isTrue();
+        }
+        finally
+        {
+            manager.shutdown();
+        }
+    }
+
+    @Test
+    public void testClearSnapshot() throws Exception
+    {
+        // Given
+        SnapshotManager manager = new SnapshotManager(1, 3, Stream::empty);
+        TableSnapshot expiringSnapshot = generateSnapshotDetails("snapshot", Instant.now().plusMillis(50000));
+        manager.addSnapshot(expiringSnapshot);
+        assertThat(manager.getExpiringSnapshots()).contains(expiringSnapshot);
+        assertThat(expiringSnapshot.exists()).isTrue();
+
+        // When
+        manager.clearSnapshot(expiringSnapshot);
+
+        // Then
+        assertThat(manager.getExpiringSnapshots()).doesNotContain(expiringSnapshot);
+        assertThat(expiringSnapshot.exists()).isFalse();
     }
 }

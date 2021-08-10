@@ -31,8 +31,8 @@ public class SnapshotDetailsTabularData
             "Column family name",
             "True size",
             "Size on disk",
-            "Time of snapshot creation",
-            "Time of snapshot expiration",};
+            "Creation time",
+            "Expiration time",};
 
     private static final String[] ITEM_DESCS = new String[]{"snapshot_name",
             "keyspace_name",

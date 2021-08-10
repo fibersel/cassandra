@@ -113,6 +113,7 @@ import org.apache.cassandra.service.PendingRangeCalculatorService;
 import org.apache.cassandra.service.QueryState;
 import org.apache.cassandra.service.StorageService;
 import org.apache.cassandra.service.StorageServiceMBean;
+import org.apache.cassandra.service.snapshot.SnapshotManager;
 import org.apache.cassandra.streaming.StreamReceiveTask;
 import org.apache.cassandra.streaming.StreamTransferTask;
 import org.apache.cassandra.streaming.async.StreamingInboundHandler;
@@ -569,9 +570,6 @@ public class Instance extends IsolatedExecutor implements IInvokableInstance
                     CassandraDaemon.getInstanceForTesting().start();
                 }
 
-                // TODO: add Feature.SNAPSHOT_CLEANUP
-                StorageService.instance.snapshotManager.start();
-
                 if (!FBUtilities.getBroadcastAddressAndPort().address.equals(broadcastAddress().getAddress()) ||
                     FBUtilities.getBroadcastAddressAndPort().port != broadcastAddress().getPort())
                     throw new IllegalStateException(String.format("%s != %s", FBUtilities.getBroadcastAddressAndPort(), broadcastAddress()));
@@ -728,7 +726,7 @@ public class Instance extends IsolatedExecutor implements IInvokableInstance
                                 () -> SSTableReader.shutdownBlocking(1L, MINUTES),
                                 () -> shutdownAndWait(Collections.singletonList(ActiveRepairService.repairCommandExecutor())),
                                 () -> ScheduledExecutors.shutdownAndWait(1L, MINUTES),
-                                () -> StorageService.instance.snapshotManager.shutdown()
+                                () -> SnapshotManager.shutdownAndWait(1L, MINUTES)
             );
 
             error = parallelRun(error, executor,

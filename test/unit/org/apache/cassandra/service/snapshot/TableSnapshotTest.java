@@ -60,24 +60,25 @@ public class TableSnapshotTest
     }
 
     @Test
-    public void testSnapshotDirsRemoval() throws IOException
+    public void testSnapshotExists() throws IOException
     {
         Set<File> folders = createFolders();
 
-        TableSnapshot tableDetails = new TableSnapshot(
+        TableSnapshot snapshot = new TableSnapshot(
         "ks",
         "tbl",
         "some",
-        new SnapshotManifest(Arrays.asList("db1", "db2", "db3"), new Duration("3m")),
+        null,
+        null,
         folders,
         (File file) -> { return 0L; }
         );
 
-        tableDetails.deleteSnapshot();
+        assertThat(snapshot.exists()).isTrue();
 
-        for (File file : folders) {
-            assertThat(file).doesNotExist();
-        }
+        folders.forEach(snapshotDir -> FileUtils.deleteRecursive(snapshotDir));
+
+        assertThat(snapshot.exists()).isFalse();
     }
 
     private Long writeBatchToFile(File file) throws IOException {
@@ -98,7 +99,8 @@ public class TableSnapshotTest
         "ks",
         "tbl",
         "some",
-        new SnapshotManifest(Arrays.asList("db1", "db2", "db3"), new Duration("3m")),
+        null,
+        null,
         folders,
         (File file) -> { return 0L; }
         );
@@ -110,6 +112,7 @@ public class TableSnapshotTest
             res += FileUtils.folderSize(dir);
         }
 
+        assertThat(tableDetails.computeSizeOnDiskBytes()).isGreaterThan(0L);
         assertThat(tableDetails.computeSizeOnDiskBytes()).isEqualTo(res);
     }
 
@@ -122,7 +125,8 @@ public class TableSnapshotTest
         "ks",
         "tbl",
         "some",
-        new SnapshotManifest(Arrays.asList("db1", "db2", "db3"), new Duration("3m")),
+        null,
+        null,
         folders,
         File::length
         );
@@ -130,9 +134,11 @@ public class TableSnapshotTest
         Long res = 0L;
 
         for (File dir : folders) {
+            writeBatchToFile(new File(dir, "tmp"));
             res += dir.length();
         }
 
+        assertThat(tableDetails.computeTrueSizeBytes()).isGreaterThan(0L);
         assertThat(tableDetails.computeTrueSizeBytes()).isEqualTo(res);
     }
 }
