@@ -988,15 +988,13 @@ public class Directories
             logger.warn("Found multiple manifests for snapshot {} of table {}.{}", tag, keyspace, table);
         }
 
-        for (File manifest : manifests) {
-            try
-            {
-                return SnapshotManifest.deserializeFromJsonFile(manifest);
-            }
-            catch (IOException e)
-            {
-                logger.warn("Cannot read manifest file {} of snapshot {}.", manifests, tag, e);
-            }
+        try
+        {
+            return SnapshotManifest.deserializeFromJsonFile(manifests.get(0));
+        }
+        catch (IOException e)
+        {
+            logger.warn("Cannot read manifest file {} of snapshot {}.", manifests, tag, e);
         }
 
         return null;

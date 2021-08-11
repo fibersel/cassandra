@@ -3899,16 +3899,18 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
             logger.debug("Cleared out snapshot directories");
     }
 
-    public Map<String, TabularData> getSnapshotDetails()
+    public Map<String, TabularData> getSnapshotDetails(boolean withoutTTL)
     {
         Map<String, TabularData> snapshotMap = new HashMap<>();
         for (Keyspace keyspace : Keyspace.all())
         {
             for (ColumnFamilyStore cfStore : keyspace.getColumnFamilyStores())
             {
-                for (Map.Entry<String, TableSnapshot> snapshotDetail : cfStore.listSnapshots().entrySet())
+                for (Map.Entry<String, TableSnapshot> snapshotDetail : cfStore.listSnapshots().entrySet().stream()
+                                                                              .filter(detail -> !withoutTTL || !detail.getValue().isExpiring())
+                                                                              .collect(toList()))
                 {
-                    TabularDataSupport data = (TabularDataSupport)snapshotMap.get(snapshotDetail.getKey());
+                    TabularDataSupport data = (TabularDataSupport) snapshotMap.get(snapshotDetail.getKey());
                     if (data == null)
                     {
                         data = new TabularDataSupport(SnapshotDetailsTabularData.TABULAR_TYPE);
@@ -3920,6 +3922,11 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
             }
         }
         return snapshotMap;
+    }
+
+    public Map<String, TabularData> getSnapshotDetails()
+    {
+        return getSnapshotDetails(false);
     }
 
     public long trueSnapshotsSize()
