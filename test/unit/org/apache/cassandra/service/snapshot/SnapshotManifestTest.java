@@ -55,9 +55,7 @@ public class SnapshotManifestTest
         out.write(3);
         out.close();
         assertThatIOException().isThrownBy(
-            () -> {
-                SnapshotManifest.deserializeFromJsonFile(manifestFile);
-            });
+            () -> SnapshotManifest.deserializeFromJsonFile(manifestFile));
     }
 
     @Test

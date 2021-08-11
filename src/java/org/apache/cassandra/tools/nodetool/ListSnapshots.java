@@ -25,6 +25,7 @@ import javax.management.openmbean.TabularData;
 
 import io.airlift.airline.Command;
 
+import io.airlift.airline.Option;
 import org.apache.cassandra.io.util.FileUtils;
 import org.apache.cassandra.tools.NodeProbe;
 import org.apache.cassandra.tools.NodeTool.NodeToolCmd;
@@ -33,6 +34,11 @@ import org.apache.cassandra.tools.nodetool.formatter.TableBuilder;
 @Command(name = "listsnapshots", description = "Lists all the snapshots along with the size on disk and true size.")
 public class ListSnapshots extends NodeToolCmd
 {
+    @Option(title = "without_ttl",
+    name = { "-wt", "--without-ttl" },
+    description = "Use -wt to list snapshots without ttl")
+    private boolean withoutTTL;
+
     @Override
     public void execute(NodeProbe probe)
     {
@@ -41,7 +47,7 @@ public class ListSnapshots extends NodeToolCmd
         {
             out.println("Snapshot Details: ");
 
-            final Map<String,TabularData> snapshotDetails = probe.getSnapshotDetails();
+            final Map<String, TabularData> snapshotDetails = probe.getSnapshotDetails(withoutTTL);
             if (snapshotDetails.isEmpty())
             {
                 out.println("There are no snapshots");

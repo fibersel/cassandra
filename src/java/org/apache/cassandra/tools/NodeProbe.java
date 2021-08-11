@@ -703,9 +703,15 @@ public class NodeProbe implements AutoCloseable
         ssProxy.clearSnapshot(tag, keyspaces);
     }
 
+    public Map<String, TabularData> getSnapshotDetails(boolean withoutTTL)
+    {
+        return ssProxy.getSnapshotDetails(withoutTTL);
+    }
+
+    @Deprecated
     public Map<String, TabularData> getSnapshotDetails()
     {
-        return ssProxy.getSnapshotDetails();
+        return getSnapshotDetails(false);
     }
 
     public long trueSnapshotsSize()

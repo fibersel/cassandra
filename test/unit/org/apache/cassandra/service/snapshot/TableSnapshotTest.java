@@ -30,31 +30,33 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import org.apache.cassandra.config.DatabaseDescriptor;
-import org.apache.cassandra.config.Duration;
 import org.apache.cassandra.io.util.FileUtils;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class TableSnapshotTest
 {
     @Before
-    public void setup() {
+    public void setup()
+    {
         DatabaseDescriptor.daemonInitialization();
     }
 
     @ClassRule
     public static TemporaryFolder tempFolder = new TemporaryFolder();
 
-    public Set<File> createFolders() throws IOException {
+    public Set<File> createFolders() throws IOException
+    {
         File folder = tempFolder.newFolder();
         Set<File> folders = new HashSet<>();
-        for (String folderName : Arrays.asList("foo", "bar", "buzz")) {
+        for (String folderName : Arrays.asList("foo", "bar", "buzz"))
+        {
             File subfolder = new File(folder, folderName);
             subfolder.mkdir();
             assertThat(subfolder).exists();
             folders.add(subfolder);
-        };
+        }
 
         return folders;
     }
@@ -71,17 +73,18 @@ public class TableSnapshotTest
         null,
         null,
         folders,
-        (File file) -> { return 0L; }
+        (File file) -> 0L
         );
 
         assertThat(snapshot.exists()).isTrue();
 
-        folders.forEach(snapshotDir -> FileUtils.deleteRecursive(snapshotDir));
+        folders.forEach(FileUtils::deleteRecursive);
 
         assertThat(snapshot.exists()).isFalse();
     }
 
-    private Long writeBatchToFile(File file) throws IOException {
+    private Long writeBatchToFile(File file) throws IOException
+    {
         FileOutputStream out = new FileOutputStream(file);
         out.write(1);
         out.write(2);
@@ -102,12 +105,15 @@ public class TableSnapshotTest
         null,
         null,
         folders,
-        (File file) -> { return 0L; }
+        (File file) -> {
+            return 0L;
+        }
         );
 
         Long res = 0L;
 
-        for (File dir : folders) {
+        for (File dir : folders)
+        {
             writeBatchToFile(new File(dir, "tmp"));
             res += FileUtils.folderSize(dir);
         }
@@ -133,7 +139,8 @@ public class TableSnapshotTest
 
         Long res = 0L;
 
-        for (File dir : folders) {
+        for (File dir : folders)
+        {
             writeBatchToFile(new File(dir, "tmp"));
             res += dir.length();
         }

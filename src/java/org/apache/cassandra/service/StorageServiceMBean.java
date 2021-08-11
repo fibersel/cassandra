@@ -274,7 +274,16 @@ public interface StorageServiceMBean extends NotificationEmitter
      *  Get the details of all the snapshot
      * @return A map of snapshotName to all its details in Tabular form.
      */
+    @Deprecated
     public Map<String, TabularData> getSnapshotDetails();
+
+    /**
+     * Get the details of all the snapshots
+     *
+     * @param withoutTTL if true, it will filter out all snapshots on TTL, if false, it will return all of them
+     * @return A map of snapshotName to all its details in Tabular form.
+     */
+    public Map<String, TabularData> getSnapshotDetails(boolean withoutTTL);
 
     /**
      * Get the true size taken by all snapshots across all keyspaces.

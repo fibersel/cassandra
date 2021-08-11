@@ -76,19 +76,23 @@ public class TableSnapshot
         return expiresAt;
     }
 
-    public boolean isExpired(Instant now) {
-        if (createdAt == null || expiresAt == null) {
+    public boolean isExpired(Instant now)
+    {
+        if (createdAt == null || expiresAt == null)
+        {
             return false;
         }
 
         return expiresAt.compareTo(now) < 0;
     }
 
-    public boolean exists() {
-        return snapshotDirs.stream().anyMatch(s -> s.exists());
+    public boolean exists()
+    {
+        return snapshotDirs.stream().anyMatch(File::exists);
     }
 
-    public boolean isExpiring() {
+    public boolean isExpiring()
+    {
         return expiresAt != null;
     }
 
@@ -126,7 +130,9 @@ public class TableSnapshot
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         TableSnapshot that = (TableSnapshot) o;
-        return Objects.equals(keyspace, that.keyspace) && Objects.equals(table, that.table) && Objects.equals(tag, that.tag) && Objects.equals(createdAt, that.createdAt) && Objects.equals(expiresAt, that.expiresAt) && Objects.equals(snapshotDirs, that.snapshotDirs);
+        return Objects.equals(keyspace, that.keyspace) && Objects.equals(table, that.table)
+               && Objects.equals(tag, that.tag) && Objects.equals(createdAt, that.createdAt)
+               && Objects.equals(expiresAt, that.expiresAt) && Objects.equals(snapshotDirs, that.snapshotDirs);
     }
 
     @Override

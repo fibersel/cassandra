@@ -28,14 +28,15 @@ import org.apache.cassandra.config.CassandraRelevantProperties;
 import org.apache.cassandra.distributed.Cluster;
 import org.apache.cassandra.distributed.api.Feature;
 import org.apache.cassandra.distributed.api.IInvokableInstance;
-import org.apache.cassandra.distributed.shared.ClusterUtils;
-import static org.apache.cassandra.distributed.shared.ClusterUtils.stopUnchecked;
+import org.apache.cassandra.distributed.api.NodeToolResult;
 import org.apache.cassandra.distributed.shared.WithProperties;
+
+import static org.apache.cassandra.distributed.shared.ClusterUtils.stopUnchecked;
 
 public class SnapshotsTTLTest extends TestBaseImpl
 {
     public static final Integer SNAPSHOT_CLEANUP_PERIOD_SECONDS = 1;
-    public static final Integer SNAPSHOT_TTL_SECONDS = 2;
+    public static final Integer SNAPSHOT_TTL_SECONDS = 5;
     private static WithProperties properties = new WithProperties();
     private static Cluster cluster;
     private static String msg;
@@ -59,21 +60,23 @@ public class SnapshotsTTLTest extends TestBaseImpl
     }
 
     @Test
-    public void testSnapshotsCleanupByTTL() throws Exception {
-            cluster.get(1).nodetoolResult("snapshot", "--ttl", String.format("%ds", SNAPSHOT_TTL_SECONDS),
-                                          "-t", "basic").asserts().success();
-            cluster.get(1).nodetoolResult("listsnapshots").asserts().success().stdoutContains("basic");
+    public void testSnapshotsCleanupByTTL() throws Exception
+    {
+        cluster.get(1).nodetoolResult("snapshot", "--ttl", String.format("%ds", SNAPSHOT_TTL_SECONDS),
+                                      "-t", "basic").asserts().success();
+        cluster.get(1).nodetoolResult("listsnapshots").asserts().success().stdoutContains("basic");
 
-            Thread.sleep(2 * SNAPSHOT_TTL_SECONDS * 1000L);
-            cluster.get(1).nodetoolResult("listsnapshots").asserts().success().stdoutNotContains("basic");
+        Thread.sleep(2 * SNAPSHOT_TTL_SECONDS * 1000L);
+        cluster.get(1).nodetoolResult("listsnapshots").asserts().success().stdoutNotContains("basic");
     }
 
     @Test
-    public void testSnapshotCleanupAfterRestart() throws Exception {
+    public void testSnapshotCleanupAfterRestart() throws Exception
+    {
         IInvokableInstance instance = cluster.get(1);
 
         instance.nodetoolResult("snapshot", "--ttl", String.format("%ds", SNAPSHOT_TTL_SECONDS),
-                                      "-t", "basic").asserts().success();
+                                "-t", "basic").asserts().success();
         instance.nodetoolResult("listsnapshots").asserts().success().stdoutContains("basic");
 
         Thread.sleep(2 * SNAPSHOT_TTL_SECONDS * 1000L);
@@ -84,12 +87,35 @@ public class SnapshotsTTLTest extends TestBaseImpl
     }
 
     @Test
-    public void testSnapshotInvalidArgument() throws Exception {
+    public void testSnapshotInvalidArgument() throws Exception
+    {
         IInvokableInstance instance = cluster.get(1);
 
         instance.nodetoolResult("snapshot", "--ttl", String.format("%ds", 1),
                                 "-t", "basic").asserts().failure().stdoutContains(msg);
 
-        instance.nodetoolResult("snapshot","--ttl","invalid-ttl").asserts().failure();
+        instance.nodetoolResult("snapshot", "--ttl", "invalid-ttl").asserts().failure();
+    }
+
+    @Test
+    public void testListingSnapshotsWithoutTTL()
+    {
+        // take snapshot without ttl
+        cluster.get(1).nodetoolResult("snapshot", "-t", "snapshot_without_ttl").asserts().success();
+
+        // take snapshot with ttl
+        cluster.get(1).nodetoolResult("snapshot", "--ttl",
+                                      String.format("%ds", SNAPSHOT_TTL_SECONDS),
+                                      "-t", "snapshot_with_ttl").asserts().success();
+
+        // list snaphots without TTL
+        NodeToolResult.Asserts withoutTTLResult = cluster.get(1).nodetoolResult("listsnapshots", "-wt").asserts().success();
+        withoutTTLResult.stdoutContains("snapshot_without_ttl");
+        withoutTTLResult.stdoutNotContains("snapshot_with_ttl");
+
+        // list all snapshots
+        NodeToolResult.Asserts allSnapshotsResult = cluster.get(1).nodetoolResult("listsnapshots").asserts().success();
+        allSnapshotsResult.stdoutContains("snapshot_without_ttl");
+        allSnapshotsResult.stdoutContains("snapshot_with_ttl");
     }
 }
