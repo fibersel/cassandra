@@ -118,4 +118,34 @@ public class SnapshotsTTLTest extends TestBaseImpl
         allSnapshotsResult.stdoutContains("snapshot_without_ttl");
         allSnapshotsResult.stdoutContains("snapshot_with_ttl");
     }
+
+    @Test
+    public void testManualSnapshotCleanup() throws Exception
+    {
+        // take snapshots with ttl
+        NodeToolResult.Asserts listSnapshotsResult;
+        cluster.get(1).nodetoolResult("snapshot", "--ttl",
+                                      String.format("%ds", SNAPSHOT_TTL_SECONDS),
+                                      "-t", "first").asserts().success();
+
+        cluster.get(1).nodetoolResult("snapshot", "--ttl",
+                                      String.format("%ds", SNAPSHOT_TTL_SECONDS),
+                                      "-t", "second").asserts().success();
+
+        listSnapshotsResult = cluster.get(1).nodetoolResult("listsnapshots").asserts().success();
+        listSnapshotsResult.stdoutContains("first");
+        listSnapshotsResult.stdoutContains("second");
+
+        cluster.get(1).nodetoolResult("clearsnapshot", "-t", "first").asserts().success();
+
+        listSnapshotsResult = cluster.get(1).nodetoolResult("listsnapshots").asserts().success();
+        listSnapshotsResult.stdoutNotContains("first");
+        listSnapshotsResult.stdoutContains("second");
+
+        Thread.sleep(2 * SNAPSHOT_TTL_SECONDS * 1000L);
+
+        listSnapshotsResult = cluster.get(1).nodetoolResult("listsnapshots").asserts().success();
+        listSnapshotsResult.stdoutNotContains("first");
+        listSnapshotsResult.stdoutNotContains("second");
+    }
 }
