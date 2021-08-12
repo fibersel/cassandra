@@ -132,7 +132,7 @@ public class SnapshotManager {
         Instant now = Instant.now();
         while (!expiringSnapshots.isEmpty() && expiringSnapshots.peek().isExpired(now))
         {
-            TableSnapshot expiredSnapshot = expiringSnapshots.poll();
+            TableSnapshot expiredSnapshot = expiringSnapshots.peek();
             logger.debug("Removing expired snapshot {}.", expiredSnapshot);
             clearSnapshot(expiredSnapshot);
         }

@@ -33,6 +33,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.service.snapshot.TableSnapshot;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -469,6 +470,10 @@ public class ColumnFamilyStoreTest
 
         TableSnapshot snapshot = cfs.snapshot("basic");
 
+        for (File snapshotDir : snapshot.getDirectories())
+        {
+            Directories.removeSnapshotDirectory(DatabaseDescriptor.getSnapshotRateLimiter(), snapshotDir);
+        }
 
         assertFalse(cfs.listSnapshots().containsKey("basic"));
     }
