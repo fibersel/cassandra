@@ -474,9 +474,11 @@ public class ColumnFamilyStoreTest
 
         assertThat(snapshot.exists()).isTrue();
         assertThat(cfs.listSnapshots().containsKey("basic")).isTrue();
-        assertThat(cfs.listSnapshots().get("basic")).isEqualTo(snapshot);
-
-        snapshot.getDirectories().forEach(FileUtils::deleteRecursive);
+        
+        for (File snapshotDir : snapshot.getDirectories())
+        {
+            Directories.removeSnapshotDirectory(DatabaseDescriptor.getSnapshotRateLimiter(), snapshotDir);
+        }
 
         assertThat(snapshot.exists()).isFalse();
         assertFalse(cfs.listSnapshots().containsKey("basic"));
