@@ -20,10 +20,11 @@ package org.apache.cassandra.service.snapshot;
 import java.io.File;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Objects;
-import java.util.OptionalLong;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.apache.cassandra.io.util.FileUtils;
 
@@ -57,6 +58,19 @@ public class TableSnapshot
         return keyspace;
     }
 
+    public static Map<String, TableSnapshot> filter(Map<String, TableSnapshot> snapshots, Map<String, String> options)
+    {
+        if (options == null)
+            return snapshots;
+
+        boolean withoutTTL = Boolean.parseBoolean(options.getOrDefault("without_ttl", "false"));
+
+        return snapshots.entrySet()
+                .stream()
+                .filter(entry -> !withoutTTL || !entry.getValue().isExpiring())
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
     public String getTable()
     {
         return table;
@@ -71,7 +85,7 @@ public class TableSnapshot
     {
         if (createdAt == null)
         {
-            long minCreation = snapshotDirs.stream().mapToLong(d -> d.lastModified()).min().orElse(0);
+            long minCreation = snapshotDirs.stream().mapToLong(File::lastModified).min().orElse(0);
             if (minCreation != 0)
             {
                 return Instant.ofEpochMilli(minCreation);

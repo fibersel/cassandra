@@ -3925,16 +3925,14 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
             logger.debug("Cleared out snapshot directories");
     }
 
-    public Map<String, TabularData> getSnapshotDetails(boolean withoutTTL)
+    public Map<String, TabularData> getSnapshotDetails(Map<String, String> options)
     {
         Map<String, TabularData> snapshotMap = new HashMap<>();
         for (Keyspace keyspace : Keyspace.all())
         {
             for (ColumnFamilyStore cfStore : keyspace.getColumnFamilyStores())
             {
-                for (Map.Entry<String, TableSnapshot> snapshotDetail : cfStore.listSnapshots().entrySet().stream()
-                                                                              .filter(detail -> !withoutTTL || !detail.getValue().isExpiring())
-                                                                              .collect(toList()))
+                for (Map.Entry<String, TableSnapshot> snapshotDetail : TableSnapshot.filter(cfStore.listSnapshots(), options).entrySet())
                 {
                     TabularDataSupport data = (TabularDataSupport) snapshotMap.get(snapshotDetail.getKey());
                     if (data == null)
@@ -3950,9 +3948,10 @@ public class StorageService extends NotificationBroadcasterSupport implements IE
         return snapshotMap;
     }
 
+    @Deprecated
     public Map<String, TabularData> getSnapshotDetails()
     {
-        return getSnapshotDetails(false);
+        return getSnapshotDetails(ImmutableMap.of());
     }
 
     public long trueSnapshotsSize()

@@ -271,7 +271,7 @@ public interface StorageServiceMBean extends NotificationEmitter
     public void clearSnapshot(String tag, String... keyspaceNames) throws IOException;
 
     /**
-     *  Get the details of all the snapshot
+     * Get the details of all the snapshot
      * @return A map of snapshotName to all its details in Tabular form.
      */
     @Deprecated
@@ -280,10 +280,10 @@ public interface StorageServiceMBean extends NotificationEmitter
     /**
      * Get the details of all the snapshots
      *
-     * @param withoutTTL if true, it will filter out all snapshots on TTL, if false, it will return all of them
+     * @param options map of options used for filtering of snapshots
      * @return A map of snapshotName to all its details in Tabular form.
      */
-    public Map<String, TabularData> getSnapshotDetails(boolean withoutTTL);
+    public Map<String, TabularData> getSnapshotDetails(Map<String, String> options);
 
     /**
      * Get the true size taken by all snapshots across all keyspaces.
