@@ -34,14 +34,16 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 
 import org.apache.cassandra.config.DatabaseDescriptor;
+import org.apache.cassandra.io.util.FileUtils;
+import org.apache.cassandra.schema.SchemaConstants;
 import org.apache.cassandra.service.snapshot.TableSnapshot;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import com.google.common.collect.Iterators;
@@ -470,11 +472,13 @@ public class ColumnFamilyStoreTest
 
         TableSnapshot snapshot = cfs.snapshot("basic");
 
-        for (File snapshotDir : snapshot.getDirectories())
-        {
-            Directories.removeSnapshotDirectory(DatabaseDescriptor.getSnapshotRateLimiter(), snapshotDir);
-        }
+        assertThat(snapshot.exists()).isTrue();
+        assertThat(cfs.listSnapshots().containsKey("basic")).isTrue();
+        assertThat(cfs.listSnapshots().get("basic")).isEqualTo(snapshot);
 
+        snapshot.getDirectories().forEach(FileUtils::deleteRecursive);
+
+        assertThat(snapshot.exists()).isFalse();
         assertFalse(cfs.listSnapshots().containsKey("basic"));
     }
 
@@ -484,7 +488,7 @@ public class ColumnFamilyStoreTest
         createSnapshotAndDelete(KEYSPACE1, CF_STANDARD1);
         createSnapshotAndDelete(KEYSPACE1, CF_STANDARD2);
         createSnapshotAndDelete(KEYSPACE2, CF_STANDARD1);
-        createSnapshotAndDelete("system", "transferred_ranges");
+        createSnapshotAndDelete(SchemaConstants.SYSTEM_KEYSPACE_NAME, SystemKeyspace.TRANSFERRED_RANGES_V2);
     }
 
     @Test

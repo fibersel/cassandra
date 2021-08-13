@@ -21,6 +21,7 @@ import java.io.File;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.Objects;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -68,6 +69,14 @@ public class TableSnapshot
 
     public Instant getCreatedAt()
     {
+        if (createdAt == null)
+        {
+            long minCreation = snapshotDirs.stream().mapToLong(d -> d.lastModified()).min().orElse(0);
+            if (minCreation != 0)
+            {
+                return Instant.ofEpochMilli(minCreation);
+            }
+        }
         return createdAt;
     }
 

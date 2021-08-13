@@ -1111,18 +1111,6 @@ public class Directories
         }
     }
 
-    // The snapshot must exist
-    public long snapshotCreationTime(String snapshotName)
-    {
-        for (File dir : dataPaths)
-        {
-            File snapshotDir = getSnapshotDirectory(dir, snapshotName);
-            if (snapshotDir.exists())
-                return snapshotDir.lastModified();
-        }
-        throw new RuntimeException("Snapshot " + snapshotName + " doesn't exist");
-    }
-
     /**
      * @return total snapshot size in byte for all snapshots.
      */

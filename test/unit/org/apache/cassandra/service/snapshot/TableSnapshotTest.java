@@ -207,4 +207,36 @@ public class TableSnapshotTest
         assertThat(tableDetails.computeTrueSizeBytes()).isGreaterThan(0L);
         assertThat(tableDetails.computeTrueSizeBytes()).isEqualTo(res);
     }
+
+    @Test
+    public void testGetCreatedAt() throws IOException
+    {
+        Set<File> folders = createFolders();
+
+        // When createdAt is not null, getCreatedAt() should return it
+        Instant createdAt = Instant.EPOCH;
+        TableSnapshot withCreatedAt = new TableSnapshot(
+        "ks",
+        "tbl",
+        "some1",
+        createdAt,
+        null,
+        folders,
+        (File file) -> 0L
+        );
+        assertThat(withCreatedAt.getCreatedAt()).isEqualTo(createdAt);
+
+        // When createdAt is  null, it should return the snapshot folder minimum update time
+        TableSnapshot withoutCreatedAt = new TableSnapshot(
+        "ks",
+        "tbl",
+        "some1",
+        null,
+        null,
+        folders,
+        (File file) -> 0L
+        );
+        assertThat(withoutCreatedAt.getCreatedAt()).isEqualTo(Instant.ofEpochMilli(folders.stream().mapToLong(f -> f.lastModified()).min().getAsLong()));
+    }
+
 }
