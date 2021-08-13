@@ -1885,7 +1885,8 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
         }
 
         // Maybe create ephemeral marker
-        if (ephemeral) {
+        if (ephemeral)
+        {
             File ephemeralSnapshotMarker = getDirectories().getNewEphemeralSnapshotMarkerFile(tag);
             createEphemeralSnapshotMarkerFile(tag, ephemeralSnapshotMarker);
             snapshotDirs.add(ephemeralSnapshotMarker.getParentFile()); // marker may create empty snapshot dir

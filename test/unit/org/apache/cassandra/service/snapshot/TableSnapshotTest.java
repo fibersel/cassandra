@@ -21,6 +21,7 @@ package org.apache.cassandra.service.snapshot;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -81,6 +82,64 @@ public class TableSnapshotTest
         folders.forEach(FileUtils::deleteRecursive);
 
         assertThat(snapshot.exists()).isFalse();
+    }
+
+    @Test
+    public void testSnapshotExpiring() throws IOException
+    {
+        Set<File> folders = createFolders();
+
+        TableSnapshot snapshot = new TableSnapshot(
+        "ks",
+        "tbl",
+        "some",
+        null,
+        null,
+        folders,
+        (File file) -> 0L
+        );
+
+        assertThat(snapshot.isExpiring()).isFalse();
+        assertThat(snapshot.isExpired(Instant.now())).isFalse();
+
+        snapshot = new TableSnapshot(
+        "ks",
+        "tbl",
+        "some",
+        Instant.now(),
+        null,
+        folders,
+        (File file) -> 0L
+        );
+
+        assertThat(snapshot.isExpiring()).isFalse();
+        assertThat(snapshot.isExpired(Instant.now())).isFalse();
+
+        snapshot = new TableSnapshot(
+        "ks",
+        "tbl",
+        "some",
+        Instant.now(),
+        Instant.now().plusSeconds(1000),
+        folders,
+        (File file) -> 0L
+        );
+
+        assertThat(snapshot.isExpiring()).isTrue();
+        assertThat(snapshot.isExpired(Instant.now())).isFalse();
+
+        snapshot = new TableSnapshot(
+        "ks",
+        "tbl",
+        "some",
+        Instant.now(),
+        Instant.now().minusSeconds(1000),
+        folders,
+        (File file) -> 0L
+        );
+
+        assertThat(snapshot.isExpiring()).isTrue();
+        assertThat(snapshot.isExpired(Instant.now())).isTrue();
     }
 
     private Long writeBatchToFile(File file) throws IOException

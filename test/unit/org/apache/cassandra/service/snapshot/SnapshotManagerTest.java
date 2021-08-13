@@ -146,8 +146,8 @@ public class SnapshotManagerTest
             assertThat(manager.getExpiringSnapshots()).contains(toExpire);
             assertThat(manager.getExpiringSnapshots()).contains(nonExpired);
 
-            // Sleep 3 seconds
-            Thread.sleep((TTL_SECS + 1) * 1000L);
+            // Sleep 4 seconds
+            Thread.sleep((TTL_SECS + 2) * 1000L);
 
             // Snapshot with ttl=2s should be gone, while other should remain
             assertThat(manager.getExpiringSnapshots()).hasSize(1);
