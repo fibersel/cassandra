@@ -75,14 +75,20 @@ public class SnapshotsTTLTest extends TestBaseImpl
     {
         IInvokableInstance instance = cluster.get(1);
 
+        // Create snapshot and check exists
         instance.nodetoolResult("snapshot", "--ttl", String.format("%ds", SNAPSHOT_TTL_SECONDS),
                                 "-t", "basic").asserts().success();
         instance.nodetoolResult("listsnapshots").asserts().success().stdoutContains("basic");
 
-        Thread.sleep(2 * SNAPSHOT_TTL_SECONDS * 1000L);
+        // Restart node
         stopUnchecked(instance);
-
         instance.startup();
+
+        // Check snapshot still exists after restart
+        instance.nodetoolResult("listsnapshots").asserts().success().stdoutContains("basic");
+
+        // Sleep for 2*TTL and then check snapshot is gone
+        Thread.sleep(2 * SNAPSHOT_TTL_SECONDS * 1000L);
         cluster.get(1).nodetoolResult("listsnapshots").asserts().success().stdoutNotContains("basic");
     }
 
