@@ -467,14 +467,16 @@ public class ColumnFamilyStoreTest
         assert indexTableFile.endsWith(baseTableFile);
     }
 
-    private void createSnapshotAndDelete(String ks, String table) {
+    private void createSnapshotAndDelete(String ks, String table) throws Exception {
         ColumnFamilyStore cfs = Keyspace.open(ks).getColumnFamilyStore(table);
 
         TableSnapshot snapshot = cfs.snapshot("basic");
 
+
         assertThat(snapshot.exists()).isTrue();
         assertThat(cfs.listSnapshots().containsKey("basic")).isTrue();
-        
+        assertThat(cfs.listSnapshots().get("basic")).isEqualTo(snapshot);
+
         for (File snapshotDir : snapshot.getDirectories())
         {
             Directories.removeSnapshotDirectory(DatabaseDescriptor.getSnapshotRateLimiter(), snapshotDir);
@@ -485,7 +487,7 @@ public class ColumnFamilyStoreTest
     }
 
     @Test
-    public void testSnapshotCreationAndDelete() {
+    public void testSnapshotCreationAndDelete() throws Exception {
         createSnapshotAndDelete(KEYSPACE1, CF_INDEX1);
         createSnapshotAndDelete(KEYSPACE1, CF_STANDARD1);
         createSnapshotAndDelete(KEYSPACE1, CF_STANDARD2);

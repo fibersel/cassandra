@@ -1867,21 +1867,21 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
 
     protected TableSnapshot createSnapshot(String tag, boolean ephemeral, Duration ttl, Set<SSTableReader> sstables) {
         Set<File> snapshotDirs = sstables.stream()
-                                         .map(s -> Directories.getSnapshotDirectory(s.descriptor, tag))
+                                         .map(s -> Directories.getSnapshotDirectory(s.descriptor, tag).getAbsoluteFile())
                                          .collect(Collectors.toCollection(HashSet::new));
 
         // Create and write snapshot manifest
         SnapshotManifest manifest = new SnapshotManifest(mapToDataFilenames(sstables), ttl);
         File manifestFile = getDirectories().getSnapshotManifestFile(tag);
         writeSnapshotManifest(manifest, manifestFile);
-        snapshotDirs.add(manifestFile.getParentFile()); // manifest may create empty snapshot dir
+        snapshotDirs.add(manifestFile.getParentFile().getAbsoluteFile()); // manifest may create empty snapshot dir
 
         // Write snapshot schema
         if (!SchemaConstants.isLocalSystemKeyspace(metadata.keyspace) && !SchemaConstants.isReplicatedSystemKeyspace(metadata.keyspace))
         {
             File schemaFile = getDirectories().getSnapshotSchemaFile(tag);
             writeSnapshotSchema(schemaFile);
-            snapshotDirs.add(schemaFile.getParentFile()); // schema may create empty snapshot dir
+            snapshotDirs.add(schemaFile.getParentFile().getAbsoluteFile()); // schema may create empty snapshot dir
         }
 
         // Maybe create ephemeral marker
@@ -1889,9 +1889,9 @@ public class ColumnFamilyStore implements ColumnFamilyStoreMBean
         {
             File ephemeralSnapshotMarker = getDirectories().getNewEphemeralSnapshotMarkerFile(tag);
             createEphemeralSnapshotMarkerFile(tag, ephemeralSnapshotMarker);
-            snapshotDirs.add(ephemeralSnapshotMarker.getParentFile()); // marker may create empty snapshot dir
+            snapshotDirs.add(ephemeralSnapshotMarker.getParentFile().getAbsoluteFile()); // marker may create empty snapshot dir
         }
-
+        
         TableSnapshot snapshot = new TableSnapshot(metadata.keyspace, metadata.name, tag, manifest.createdAt,
                                                    manifest.expiresAt, snapshotDirs, directories::getTrueAllocatedSizeIn);
 
